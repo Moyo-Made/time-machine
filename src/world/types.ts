@@ -47,8 +47,24 @@ export interface Surface extends Footprint {
   readonly kind: 'road' | 'sidewalk' | 'paving'
 }
 
+export type Cardinal = 'north' | 'south' | 'east' | 'west'
+
+/** Names of the authored 3D models. The renderer maps each one to a file. */
+export type ModelAsset = 'merchant-house'
+
+/** Which model shows an entity in this era, and which way its front points. North is -z. */
+export interface ModelRef {
+  readonly asset: ModelAsset
+  readonly facing: Cardinal
+}
+
 export interface Building extends Footprint {
   readonly kind: 'house' | 'wall'
+  /**
+   * Purely visual. Collision always comes from the footprint, so the world
+   * behaves the same whether or not the model has loaded.
+   */
+  readonly model?: ModelRef
 }
 
 export type PropKind = 'lampPost' | 'crate' | 'barrel' | 'bench' | 'cart' | 'car' | 'well'

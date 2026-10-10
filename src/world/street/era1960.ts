@@ -33,7 +33,12 @@ export const street1960: WorldDefinition = {
     // The gap between west-2 and west-3 is the alley.
     lot('west-3', 'west', 2, 12.5, 7),
     lot('west-5', 'west', -22, -9, 6, 0.8),
-    lot('east-2', 'east', 18, 27, 6, 0.6),
+    // Shown as a model. The height is the model's own, kept in step by a test;
+    // the footprint, and so the collision, is unchanged from the graybox.
+    {
+      ...lot('east-2', 'east', 18, 27, 8.82, 0.6),
+      model: { asset: 'merchant-house', facing: 'west' },
+    },
     lot('east-3', 'east', 10, 18, 9),
     // The lot between east-4 and east-6 is an open yard.
   ],

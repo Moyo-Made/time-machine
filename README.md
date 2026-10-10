@@ -2,14 +2,15 @@
 
 A browser-based 3D historical exploration game. You are an invisible observer: you walk reconstructed places, shift between eras, and investigate what you find, without changing history.
 
-This repository holds a vertical slice. Two milestones are done:
+This repository holds a vertical slice. Three milestones are done:
 
 - **Milestone 01**: a graybox street you can explore in first person.
 - **Milestone 02**: time shift. Press T to switch the street between two layouts, labelled 1960 and 2026, without losing your position or view.
+- **Milestone 03**: the first authored asset. One building, modelled in Blender and exported as GLB, stands on the street in the 1960 layout. Everything else is still graybox.
 
 There are no characters, discoveries or real historical content yet.
 
-> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. Nothing in this repository makes a historical claim.
+> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Nothing in this repository makes a historical claim.
 
 ## Run it
 
@@ -41,7 +42,9 @@ The game starts in the 2026 layout. T switches to the other layout; the label at
 - **If something stands there in the other era**, you are backed out of it by up to 2 m, but only out of the thing you would overlap and never across another wall.
 - **If there is no such way out**, the shift is refused, nothing changes, and a message says so.
 
-Places to try it: the alley on the west side (open in 1960, built over in 2026), the lot between the two northern buildings on the east side (a yard in 1960, a building in 2026), and the open lot with benches on the east side (open in 2026, a building in 1960).
+The modelled building is on the east side, a few steps ahead of where you start. It exists only in the 1960 layout: shift there and it appears; shift back and its lot is open ground.
+
+Other places to try it: the alley on the west side (open in 1960, built over in 2026), the lot between the two northern buildings on the east side (a yard in 1960, a building in 2026), and the open lot with benches on the east side (open in 2026, a building in 1960).
 
 ## Commands
 
@@ -53,6 +56,8 @@ Places to try it: the alley on the west side (open in 1960, built over in 2026),
 | `npm run lint` | Lint with Oxlint |
 | `npm test` | Unit tests (Vitest) for movement, collision, the layouts and shifting |
 | `npm run test:e2e` | Browser tests (Playwright): load the game and play it |
+| `npm run asset:export` | Export the Blender source file to the GLB the game loads. Needs Blender |
+| `npm run asset:generate` | Rebuild the Blender source file from its script. Needs Blender; see the warning in [assets/README.md](assets/README.md) |
 
 The browser tests start their own dev server on port 5199 and drive the Google Chrome installed on your machine. To use Playwright's own browser instead, run `npx playwright install chromium` and delete the `channel: 'chrome'` line in `playwright.config.ts`. They save screenshots of the street in both eras under `test-results/`.
 
@@ -66,9 +71,12 @@ src/
   render/   React Three Fiber components that draw a world
   ui/       The HUD
   state/    One Zustand store for slow-changing game state
+assets/     Blender source files, the scripts that build and export them, previews
 e2e/        Browser tests
 docs/       Architecture notes
 ```
+
+Exported models live in `src/render/models/`. How a model is made, exported, limited and measured is in [assets/README.md](assets/README.md). Blender is needed only to change a model, not to run, build or test the game.
 
 The rule that shapes it: the world is data, simulation is pure functions, and React Three Fiber only draws. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the reasoning, how a shift stays consistent, what entity ids mean across eras, and the main technical risks.
 
@@ -86,6 +94,14 @@ Time shift:
 - **A shift can be refused close to open ground.** Backing out only goes through the thing you would overlap, so being a little inside new geometry with that side blocked is refused even if free space is near.
 - **The crossing check is sampled.** The path of a backed-out arrival is tested at intervals of a quarter of the player's radius, which leaves about 1 cm of tolerance at its edges. The arrival point itself is checked exactly.
 
+Authored models:
+
+- **One model, in one era.** The rest of the street is graybox.
+- **A model does not change collision.** A lot is still one box, so the building's veranda cannot be walked onto.
+- **The first appearance of the model drops one or two frames** on the development machine. Later shifts do not. Figures are in [assets/README.md](assets/README.md).
+- **If the model file fails to load**, the lot shows its graybox box and the game carries on. Nothing tells the player.
+- **Fine shadows are lost.** Thin parts such as balusters barely cast, because one shadow map covers the whole street.
+
 Movement and world:
 
 - **Flat world only.** There is no gravity, jumping, stairs or slopes; the camera stays 1.7 m above the ground. Sidewalks are drawn 12 cm high but you do not step up onto them.
@@ -96,7 +112,8 @@ Movement and world:
 
 Presentation and tooling:
 
-- **Placeholder visuals.** Untextured boxes and cylinders, one fixed sun, a flat sky colour, no audio.
+- **Placeholder visuals.** Untextured boxes and cylinders apart from the one model, one fixed sun, a flat sky colour, no audio.
+- **The sun is fixed in the south-west**, so fronts on the west side of the street are always in shade.
 - **Shadow edges** look slightly stepped up close: one 2048-pixel shadow map covers the whole street.
 - **A console warning**, `THREE.Clock: This module has been deprecated`, appears on load. It comes from inside React Three Fiber and is harmless.
 - **The production build warns about a large chunk.** That is three.js; code splitting is not set up yet.

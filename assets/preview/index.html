@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Asset preview</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        font: 13px/1.4 system-ui, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      #info {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: rgb(22 26 30 / 0.8);
+        color: #f1f2ef;
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="info">loading…</div>
+    <!--
+      A standalone viewer for looking at an exported GLB outside the game.
+      Open it through the dev server:  npm run dev, then /assets/preview/index.html
+
+      Query parameters:
+        view=front | left | right | street | top     camera position (default left)
+        sun=front | game                             front-lit, or lit as the game lights an east-side lot
+        context=1                                    adds grey neighbours and a 1.7 m figure
+        info=0                                       hides the text panel
+      Drag to orbit, scroll to zoom.
+    -->
+    <script type="module">
+      import * as THREE from 'three'
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+      import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+
+      const params = new URLSearchParams(location.search)
+      const SKY = '#d3c8ae'
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true })
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+      renderer.setSize(innerWidth, innerHeight)
+      // Same output settings as the game, so colours match what it will show.
+      renderer.toneMapping = THREE.ACESFilmicToneMapping
+      renderer.shadowMap.enabled = true
+      renderer.shadowMap.type = THREE.PCFShadowMap
+      document.body.append(renderer.domElement)
+
+      const scene = new THREE.Scene()
+      scene.background = new THREE.Color(SKY)
+      scene.add(new THREE.HemisphereLight('#e6edf5', '#8a857d', 2))
+
+      // The model's front is +Z. In the game an east-side lot faces west, which
+      // puts the game's sun behind the building.
+      const sunDirection =
+        params.get('sun') === 'game' ? new THREE.Vector3(0.38, 0.78, -0.5) : new THREE.Vector3(0.38, 0.78, 0.5)
+      const sun = new THREE.DirectionalLight('#fff4e0', 2.6)
+      sun.position.copy(sunDirection).multiplyScalar(40)
+      sun.castShadow = true
+      sun.shadow.mapSize.set(2048, 2048)
+      sun.shadow.bias = -0.0004
+      sun.shadow.normalBias = 0.04
+      Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 90 })
+      scene.add(sun)
+
+      const matte = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.95 })
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), matte('#a6a7a5'))
+      ground.rotation.x = -Math.PI / 2
+      ground.receiveShadow = true
+      scene.add(ground)
+
+      if (params.get('context') === '1') {
+        // The two neighbours of lot east-2, in the model's own coordinates:
+        // 9 m and 10 m tall, standing 0.6 m further forward than this building.
+        const box = (width, height, x) => {
+          const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, 13.5), matte('#b4b6b4'))
+          mesh.position.set(x, height / 2, 0.6 - 13.5 / 2)
+          mesh.castShadow = mesh.receiveShadow = true
+          scene.add(mesh)
+        }
+        box(8, 9, -4.5 - 4)
+        box(11, 10, 4.5 + 5.5)
+        const figure = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.26, 4, 12), matte('#c2813c'))
+        figure.position.set(2.4, 0.85, 1.6)
+        figure.castShadow = true
+        scene.add(figure)
+      }
+
+      const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.1, 300)
+      const views = {
+        front: [0, 4.4, 24],
+        left: [-12, 5.2, 17],
+        right: [12, 5.2, 17],
+        street: [-6.5, 1.7, 9],
+        top: [-9, 17, 13],
+      }
+      const view = views[params.get('view')] ?? views.left
+      camera.position.set(...view)
+      const controls = new OrbitControls(camera, renderer.domElement)
+      controls.target.set(0, params.get('view') === 'street' ? 4.2 : 3.8, -3)
+      controls.update()
+
+      const info = document.getElementById('info')
+      if (params.get('info') === '0') info.remove()
+
+      const url = params.get('model') ?? '/src/render/models/merchant-house.glb'
+      new GLTFLoader().load(
+        url,
+        (gltf) => {
+          let triangles = 0
+          let meshes = 0
+          gltf.scene.traverse((object) => {
+            if (!object.isMesh) return
+            object.castShadow = object.receiveShadow = true
+            meshes += 1
+            const geometry = object.geometry
+            triangles += (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3
+          })
+          scene.add(gltf.scene)
+          const size = new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3())
+          info.textContent =
+            `${url.split('/').pop()}\n` +
+            `${size.x.toFixed(2)} m wide · ${size.y.toFixed(2)} m tall · ${size.z.toFixed(2)} m deep\n` +
+            `${triangles.toLocaleString('en')} triangles · ${meshes} draw calls`
+          document.body.dataset.ready = 'true'
+        },
+        undefined,
+        (error) => {
+          info.textContent = `Could not load ${url}\n${error.message ?? error}`
+          document.body.dataset.ready = 'error'
+        },
+      )
+
+      addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight
+        camera.updateProjectionMatrix()
+        renderer.setSize(innerWidth, innerHeight)
+      })
+      renderer.setAnimationLoop(() => renderer.render(scene, camera))
+    </script>
+  </body>
+</html>

@@ -2,8 +2,11 @@ import { useMemo } from 'react'
 import { Object3D } from 'three'
 import type { Rect } from '../world/types'
 
-/** Direction towards the sun: south-east and fairly high, so buildings shade the street. */
-const SUN_DIRECTION = { x: 0.5, y: 0.78, z: 0.38 }
+/**
+ * Direction towards the sun: south-west and fairly high. An afternoon sun
+ * lights the fronts on the east side of the street and shades the west side.
+ */
+const SUN_DIRECTION = { x: -0.5, y: 0.78, z: 0.38 }
 const SHADOW_MARGIN = 6
 
 /** Sky fill plus one shadow-casting sun whose shadow frustum covers the world bounds. */

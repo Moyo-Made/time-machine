@@ -1,5 +1,6 @@
 import { BoxGeometry, CylinderGeometry, MeshStandardMaterial, PlaneGeometry } from 'three'
 import type { Footprint, Prop, Rect, WorldDefinition } from '../world/types'
+import { ModelView } from './ModelView'
 
 // Every placeholder is a unit primitive scaled to its footprint, so the whole
 // world shares three geometries and a handful of materials.
@@ -97,15 +98,21 @@ export function WorldView({ world }: { world: WorldDefinition }) {
           castShadow={false}
         />
       ))}
-      {world.buildings.map((building, index) => (
-        <Solid
-          key={building.id}
-          footprint={building}
-          material={
-            building.kind === 'wall' ? WALL : HOUSE_TONES[index % HOUSE_TONES.length]!
-          }
-        />
-      ))}
+      {world.buildings.map((building, index) => {
+        const graybox = (
+          <Solid
+            key={building.id}
+            footprint={building}
+            material={
+              building.kind === 'wall' ? WALL : HOUSE_TONES[index % HOUSE_TONES.length]!
+            }
+          />
+        )
+        if (!building.model) return graybox
+        return (
+          <ModelView key={building.id} building={building} model={building.model} fallback={graybox} />
+        )
+      })}
       {world.props.map((prop) => (
         <PropView key={prop.id} prop={prop} />
       ))}

@@ -4,19 +4,31 @@ import type {} from '../src/debug'
 
 export const VIEW_CENTER = { x: 640, y: 360 }
 
+interface GameOptions {
+  /** Runs before the page loads, e.g. to intercept requests. */
+  beforeLoad?: (page: Page) => Promise<void>
+  /** Console errors matching this are expected and do not fail the test. */
+  expectedErrors?: RegExp
+}
+
 /**
  * Opens the game before each test and, after each one, fails it if the page
- * logged an error or the player was ever found inside a solid of the active era.
+ * logged an unexpected error or the player was ever found inside a solid of the
+ * active era.
  */
-export function setUpGame() {
+export function setUpGame({ beforeLoad, expectedErrors }: GameOptions = {}) {
   let problems: string[]
 
   test.beforeEach(async ({ page }) => {
     problems = []
-    page.on('pageerror', (error) => problems.push(error.message))
+    const note = (text: string) => {
+      if (!expectedErrors?.test(text)) problems.push(text)
+    }
+    page.on('pageerror', (error) => note(error.message))
     page.on('console', (message) => {
-      if (message.type() === 'error') problems.push(message.text())
+      if (message.type() === 'error') note(message.text())
     })
+    await beforeLoad?.(page)
     await page.goto('/')
     await page.waitForFunction(
       () => window.__TM__?.player != null && window.__TM__.store.getState().player != null,

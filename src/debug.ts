@@ -1,4 +1,5 @@
 import type { RefObject } from 'react'
+import { Box3, type Mesh, type Object3D } from 'three'
 import { SURROUNDINGS } from './era/eras'
 import { isBlocked } from './player/collision'
 import type { PlayerHandle } from './player/PlayerController'
@@ -13,6 +14,16 @@ interface DebugHandle {
   player: PlayerHandle | null
   /** Frames on which the player was found inside a solid of the active era. Must stay 0. */
   violations: number
+  /** Authored models currently in the scene, by the id of the entity they show. */
+  models: Record<string, MountedModel>
+}
+
+interface MountedModel {
+  asset: string
+  /** World-space bounds of the placed model. */
+  min: [number, number, number]
+  max: [number, number, number]
+  triangles: number
 }
 
 declare global {
@@ -22,7 +33,7 @@ declare global {
 }
 
 export function installDebugHandle() {
-  window.__TM__ = { store: useGameStore, player: null, violations: 0 }
+  window.__TM__ = { store: useGameStore, player: null, violations: 0, models: {} }
 }
 
 /**
@@ -44,4 +55,31 @@ export function watchPlayer(player: RefObject<PlayerHandle | null>, radius: numb
   }
   frame = requestAnimationFrame(check)
   return () => cancelAnimationFrame(frame)
+}
+
+/** Records a model while it is in the scene. Returns the function that removes the record. */
+export function trackModel(entityId: string, asset: string, object: Object3D) {
+  const debug = window.__TM__
+  if (!debug) return () => {}
+
+  // Measured a frame later, once the model has been placed in the world.
+  const frame = requestAnimationFrame(() => {
+    object.updateWorldMatrix(true, true)
+    const box = new Box3().setFromObject(object)
+    let triangles = 0
+    object.traverse((child) => {
+      const geometry = (child as Mesh).isMesh ? (child as Mesh).geometry : null
+      if (geometry) triangles += (geometry.index ?? geometry.attributes.position!).count / 3
+    })
+    debug.models[entityId] = {
+      asset,
+      min: box.min.toArray(),
+      max: box.max.toArray(),
+      triangles,
+    }
+  })
+  return () => {
+    cancelAnimationFrame(frame)
+    delete debug.models[entityId]
+  }
 }

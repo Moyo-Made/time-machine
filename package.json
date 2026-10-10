@@ -10,6 +10,8 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "asset:generate": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/merchant_house.py --",
+    "asset:export": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/export_glb.py -- assets/merchant-house/merchant-house.blend src/render/models/merchant-house.glb",
     "preview": "vite preview"
   },
   "dependencies": {
