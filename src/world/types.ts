@@ -14,9 +14,25 @@ export interface Collider extends Rect {
   readonly id: string
 }
 
-/** Anything box-shaped that stands on the ground: centre of its footprint plus size. */
+/** Everything the player can collide with in one world. */
+export interface Surroundings {
+  readonly colliders: readonly Collider[]
+  readonly bounds: Rect
+}
+
+/**
+ * Anything box-shaped that stands on the ground: centre of its footprint plus size.
+ *
+ * An object of this type is one entity's representation in one era. Its `id`
+ * names the entity itself, the thing with a continuous existence:
+ *
+ * - The same id in two eras is the same thing, possibly altered (taller, extended).
+ * - A different thing on the same spot gets a different id. An id is never
+ *   reused for another entity and never encodes an era.
+ * - An entity absent from an era did not exist then.
+ * - Ids are unique within a world.
+ */
 export interface Footprint {
-  /** Stable across eras, so the same entity can be matched later. */
   readonly id: string
   readonly x: number
   readonly z: number
@@ -35,7 +51,7 @@ export interface Building extends Footprint {
   readonly kind: 'house' | 'wall'
 }
 
-export type PropKind = 'lampPost' | 'crate' | 'barrel' | 'bench' | 'cart' | 'well'
+export type PropKind = 'lampPost' | 'crate' | 'barrel' | 'bench' | 'cart' | 'car' | 'well'
 
 export interface Prop extends Footprint {
   readonly kind: PropKind

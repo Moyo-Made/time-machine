@@ -1,56 +1,9 @@
-import { expect, test, type Page } from '@playwright/test'
-// Brings in the type of the development-only `window.__TM__` handle.
-import type {} from '../src/debug'
+import { expect, test } from '@playwright/test'
 import { DEFAULT_PLAYER_CONFIG as config } from '../src/player/movement'
-import { street } from '../src/world/street'
+import { street2026 as street } from '../src/world/street/era2026'
+import { hold, readGame, takeControl, setUpGame, VIEW_CENTER } from './game'
 
-const VIEW_CENTER = { x: 640, y: 360 }
-
-let problems: string[]
-
-test.beforeEach(async ({ page }) => {
-  problems = []
-  page.on('pageerror', (error) => problems.push(error.message))
-  page.on('console', (message) => {
-    if (message.type() === 'error') problems.push(message.text())
-  })
-  await page.goto('/')
-  await page.waitForFunction(() => window.__TM__?.store.getState().player != null)
-})
-
-test.afterEach(() => {
-  expect(problems, 'page errors and console errors').toEqual([])
-})
-
-const readPlayer = (page: Page) =>
-  page.evaluate(() => window.__TM__!.store.getState().player!)
-
-/** Clicks into the game, as a player would, and waits for the mouse to be captured. */
-async function takeControl(page: Page) {
-  await page.mouse.click(VIEW_CENTER.x, VIEW_CENTER.y)
-  const captured = await page
-    .waitForFunction(() => window.__TM__!.store.getState().engaged, null, { timeout: 3000 })
-    .then(
-      () => true,
-      () => false,
-    )
-  if (!captured) {
-    // Some headless setups refuse pointer lock. Movement can still be tested.
-    test.info().annotations.push({
-      type: 'pointer lock',
-      description: 'refused by the browser; control was forced through the debug handle',
-    })
-    await page.evaluate(() => window.__TM__!.store.getState().setEngaged(true))
-  }
-}
-
-async function hold(page: Page, key: string, milliseconds: number) {
-  await page.keyboard.down(key)
-  await page.waitForTimeout(milliseconds)
-  await page.keyboard.up(key)
-  // Let the next ten-per-second snapshot land.
-  await page.waitForTimeout(250)
-}
+setUpGame()
 
 test('renders the street, shows the instructions and follows the window size', async ({
   page,
@@ -76,9 +29,9 @@ test('W walks forward along the street', async ({ page }) => {
   await takeControl(page)
   await expect(page.getByText('Click to explore')).toBeHidden()
 
-  const start = await readPlayer(page)
+  const start = await readGame(page)
   await hold(page, 'KeyW', 1000)
-  const end = await readPlayer(page)
+  const end = await readGame(page)
 
   // One second of walking, with slack for timer jitter.
   const travelled = start.z - end.z
@@ -94,7 +47,7 @@ test('a building stops the player at its wall', async ({ page }) => {
   await takeControl(page)
   // Strafe left from the spawn point for far longer than it takes to reach the wall.
   await hold(page, 'KeyA', 3000)
-  const end = await readPlayer(page)
+  const end = await readGame(page)
 
   expect(end.x).toBeCloseTo(wallX + config.radius, 3)
   expect(end.z).toBeCloseTo(street.spawn.z, 3)
@@ -104,8 +57,8 @@ test('the mouse turns and tilts the view', async ({ page }) => {
   await takeControl(page)
   await page.mouse.move(VIEW_CENTER.x + 100, VIEW_CENTER.y - 30, { steps: 5 })
 
-  await expect.poll(async () => (await readPlayer(page)).yaw).toBeLessThan(0)
-  expect((await readPlayer(page)).pitch).toBeGreaterThan(0)
+  await expect.poll(async () => (await readGame(page)).yaw).toBeLessThan(0)
+  expect((await readGame(page)).pitch).toBeGreaterThan(0)
 })
 
 test('the performance readout reports numbers and P toggles it', async ({ page }) => {

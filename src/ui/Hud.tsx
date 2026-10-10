@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { isShortcut } from '../keys'
 import { useGameStore } from '../state/gameStore'
 import './hud.css'
 
@@ -6,6 +7,7 @@ const CONTROLS = [
   { keys: ['W', 'A', 'S', 'D'], action: 'Move' },
   { keys: ['Mouse'], action: 'Look around' },
   { keys: ['Shift'], action: 'Run' },
+  { keys: ['T'], action: 'Shift era' },
   { keys: ['Esc'], action: 'Release the mouse' },
   { keys: ['P'], action: 'Show or hide performance' },
 ] as const
@@ -35,12 +37,14 @@ function PerfPanel() {
 /** DOM overlay above the canvas. Never takes pointer events, so clicks reach the game. */
 export function Hud() {
   const engaged = useGameStore((state) => state.engaged)
+  const era = useGameStore((state) => state.era)
+  const notice = useGameStore((state) => state.notice)
   const perfVisible = useGameStore((state) => state.perfVisible)
   const togglePerf = useGameStore((state) => state.togglePerf)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'KeyP' && !event.repeat) togglePerf()
+      if (event.code === 'KeyP' && !event.repeat && !isShortcut(event)) togglePerf()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -50,12 +54,23 @@ export function Hud() {
     <div className="hud">
       {perfVisible && <PerfPanel />}
 
+      <div className="hud-era">
+        <span>Era</span>
+        <strong data-testid="era">{era}</strong>
+      </div>
+      {notice && (
+        // Keyed so that a repeated message restarts its fade-out.
+        <p key={notice.id} className="hud-notice" role="status">
+          {notice.text}
+        </p>
+      )}
+
       {engaged ? (
         <>
           <div className="hud-crosshair" />
           <p className="hud-hint">
-            <kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>Shift</kbd> run · <kbd>Esc</kbd>{' '}
-            release
+            <kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>Shift</kbd> run · <kbd>T</kbd>{' '}
+            shift era · <kbd>Esc</kbd> release
           </p>
         </>
       ) : (
@@ -75,7 +90,10 @@ export function Hud() {
                 </div>
               ))}
             </dl>
-            <p className="hud-touch">A keyboard and mouse are needed for now.</p>
+            <p className="hud-note">
+              A fictional graybox test street. Not a historical reconstruction of any real place.
+            </p>
+            <p className="hud-note hud-touch">A keyboard and mouse are needed for now.</p>
           </div>
         </div>
       )}

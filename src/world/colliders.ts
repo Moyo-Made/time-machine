@@ -1,4 +1,4 @@
-import type { Collider, Footprint, WorldDefinition } from './types'
+import type { Collider, Footprint, Surroundings, WorldDefinition } from './types'
 
 export function footprintCollider(f: Footprint): Collider {
   return {
@@ -13,4 +13,8 @@ export function footprintCollider(f: Footprint): Collider {
 /** Everything solid in a world. Surfaces are walkable and excluded. */
 export function worldColliders(world: WorldDefinition): Collider[] {
   return [...world.buildings, ...world.props].map(footprintCollider)
+}
+
+export function worldSurroundings(world: WorldDefinition): Surroundings {
+  return { colliders: worldColliders(world), bounds: world.bounds }
 }

@@ -13,6 +13,8 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    // The tests import the type of the debug handle, which reaches a .tsx file.
+    "jsx": "react-jsx",
 
     /* Strictness */
     "strict": true,

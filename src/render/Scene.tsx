@@ -1,14 +1,21 @@
-import type { WorldDefinition } from '../world/types'
+import { WORLDS, type EraId } from '../era/eras'
 import { Lighting } from './Lighting'
 import { WorldView } from './WorldView'
 
-const SKY = '#b9c4cf'
+// A cue for which layout is showing, not a claim about either year.
+const SKY: Record<EraId, string> = {
+  '1960': '#d3c8ae',
+  '2026': '#b9c4cf',
+}
 
-export function Scene({ world }: { world: WorldDefinition }) {
+export function Scene({ era }: { era: EraId }) {
+  const world = WORLDS[era]
+  const sky = SKY[era]
+
   return (
     <>
-      <color attach="background" args={[SKY]} />
-      <fog attach="fog" args={[SKY, 35, 130]} />
+      <color attach="background" args={[sky]} />
+      <fog attach="fog" args={[sky, 35, 130]} />
       <Lighting bounds={world.bounds} />
       <WorldView world={world} />
     </>

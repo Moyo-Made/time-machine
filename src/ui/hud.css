@@ -39,6 +39,69 @@
   font-variant-numeric: tabular-nums;
 }
 
+.hud-era {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--hud-panel);
+  transform: translateX(-50%);
+}
+
+.hud-era span {
+  font-size: 0.75em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud-muted);
+}
+
+.hud-era strong {
+  font-size: 1.35em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-notice {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--hud-panel);
+  text-align: center;
+  transform: translateX(-50%);
+  animation: hud-notice-fade 3.5s ease-in forwards;
+}
+
+/* Too narrow for the era label to sit beside the performance panel. */
+@media (max-width: 640px) {
+  .hud-era {
+    top: 64px;
+    left: 12px;
+    transform: none;
+  }
+
+  .hud-notice {
+    top: 108px;
+  }
+}
+
+@keyframes hud-notice-fade {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 .hud-crosshair {
   position: absolute;
   top: 50%;
@@ -121,10 +184,18 @@
   color: var(--hud-muted);
 }
 
+.hud-note {
+  margin: 16px 0 0;
+  font-size: 0.9em;
+  color: var(--hud-muted);
+}
+
+.hud-note + .hud-note {
+  margin-top: 6px;
+}
+
 .hud-touch {
   display: none;
-  margin: 16px 0 0;
-  color: var(--hud-muted);
 }
 
 @media (pointer: coarse) {

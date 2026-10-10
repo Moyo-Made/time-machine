@@ -1,3 +1,4 @@
+import { isShortcut } from '../keys'
 import type { MoveIntent } from './movement'
 
 export interface PlayerInput {
@@ -5,6 +6,8 @@ export interface PlayerInput {
   intent(): MoveIntent
   /** Mouse movement in pixels since the last call. */
   consumeLook(): { dx: number; dy: number }
+  /** Forgets every held key and pending mouse movement. */
+  reset(): void
   dispose(): void
 }
 
@@ -22,10 +25,21 @@ export function createPlayerInput(): PlayerInput {
   let lookX = 0
   let lookY = 0
 
-  const onKeyDown = (event: KeyboardEvent) => held.add(event.code)
+  const reset = () => {
+    held.clear()
+    lookX = 0
+    lookY = 0
+  }
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    // Shortcuts are not movement. macOS also never sends keyup for a key that
+    // is released while Cmd is down, so drop everything rather than risk a stuck key.
+    if (isShortcut(event)) held.clear()
+    else held.add(event.code)
+  }
   const onKeyUp = (event: KeyboardEvent) => held.delete(event.code)
   // A key released while the window is unfocused never sends keyup.
-  const onBlur = () => held.clear()
+  const onBlur = reset
   const onMouseMove = (event: MouseEvent) => {
     lookX += clampDelta(event.movementX)
     lookY += clampDelta(event.movementY)
@@ -52,6 +66,7 @@ export function createPlayerInput(): PlayerInput {
       lookY = 0
       return look
     },
+    reset,
     dispose: () => {
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)

@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
-import type { Collider, Rect, Spawn } from '../world/types'
+import { useEffect, useImperativeHandle, useRef, type Ref } from 'react'
+import type { Spawn, Surroundings } from '../world/types'
 import { createPlayerInput, type PlayerInput } from './input'
 import {
   applyLook,
@@ -12,10 +12,24 @@ import {
 
 const SNAPSHOT_INTERVAL = 0.1
 
+/** Imperative access for systems that move the player from outside, such as an era shift. */
+export interface PlayerHandle {
+  /** The live state, as of the last simulated frame. */
+  getState(): PlayerState
+  /** Moves the player. The view direction is left alone. */
+  teleport(x: number, z: number): void
+}
+
 interface PlayerControllerProps {
+  ref?: Ref<PlayerHandle>
+  /** Where the player starts. Read once, when the controller mounts. */
   spawn: Spawn
-  colliders: readonly Collider[]
-  bounds: Rect
+  /**
+   * What the player collides with right now. Called once at the start of every
+   * frame, so a change of world takes effect on the very next step and never
+   * part-way through one.
+   */
+  getSurroundings: () => Surroundings
   /** While false the player stays put and input is ignored. */
   enabled: boolean
   config?: PlayerConfig
@@ -30,9 +44,9 @@ interface PlayerControllerProps {
  * The per-frame state lives in a ref on purpose, so moving never re-renders React.
  */
 export function PlayerController({
+  ref,
   spawn,
-  colliders,
-  bounds,
+  getSurroundings,
   enabled,
   config = DEFAULT_PLAYER_CONFIG,
   onSnapshot,
@@ -42,9 +56,16 @@ export function PlayerController({
   const input = useRef<PlayerInput | null>(null)
   const sinceSnapshot = useRef(SNAPSHOT_INTERVAL)
 
-  useEffect(() => {
-    state.current = { x: spawn.x, z: spawn.z, yaw: spawn.yaw, pitch: 0 }
-  }, [spawn])
+  useImperativeHandle(
+    ref,
+    () => ({
+      getState: () => state.current,
+      teleport: (x, z) => {
+        state.current = { ...state.current, x, z }
+      },
+    }),
+    [],
+  )
 
   useEffect(() => {
     const created = createPlayerInput()
@@ -55,7 +76,14 @@ export function PlayerController({
     }
   }, [])
 
+  // Losing control drops whatever was held, so nothing is replayed on resume.
+  useEffect(() => {
+    if (!enabled) input.current?.reset()
+  }, [enabled])
+
   useFrame((_, delta) => {
+    const { colliders, bounds } = getSurroundings()
+
     // Always drain the mouse, so movement made while paused is not replayed on resume.
     const look = input.current?.consumeLook()
     if (enabled && input.current && look) {

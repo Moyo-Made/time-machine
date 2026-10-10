@@ -79,6 +79,7 @@ function PropView({ prop }: { prop: Prop }) {
     case 'crate':
     case 'bench':
     case 'cart':
+    case 'car':
       return <Solid footprint={prop} material={PROP} />
   }
 }
