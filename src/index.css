@@ -1,0 +1,16 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: #b9c4cf;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+canvas {
+  display: block;
+}

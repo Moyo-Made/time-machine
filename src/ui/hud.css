@@ -1,0 +1,134 @@
+.hud {
+  --hud-panel: rgb(22 26 30 / 0.82);
+  --hud-text: #f1f2ef;
+  --hud-muted: #b4b9bd;
+
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--hud-text);
+  font-size: clamp(0.8125rem, 0.75rem + 0.3vw, 0.9375rem);
+  line-height: 1.45;
+  user-select: none;
+}
+
+.hud kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0.05em 0.45em;
+  border: 1px solid rgb(255 255 255 / 0.28);
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.08);
+  font: inherit;
+  font-size: 0.85em;
+  text-align: center;
+}
+
+.hud-perf {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--hud-panel);
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.45);
+}
+
+.hud-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--hud-panel);
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.hud-start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(18 22 26 / 0.45);
+}
+
+.hud-card {
+  box-sizing: border-box;
+  width: min(100%, 23rem);
+  padding: 22px 26px;
+  border-radius: 12px;
+  background: var(--hud-panel);
+}
+
+.hud-card h1 {
+  margin: 0;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud-muted);
+}
+
+.hud-lede {
+  margin: 4px 0 16px;
+  font-size: 1.6em;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.hud-card dl {
+  display: grid;
+  /* One shared key column, as wide as the longest key group. */
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.hud-card dl > div {
+  display: contents;
+}
+
+.hud-card dt {
+  display: flex;
+  gap: 4px;
+}
+
+.hud-card dd {
+  margin: 0;
+  color: var(--hud-muted);
+}
+
+.hud-touch {
+  display: none;
+  margin: 16px 0 0;
+  color: var(--hud-muted);
+}
+
+@media (pointer: coarse) {
+  .hud-touch {
+    display: block;
+  }
+}
