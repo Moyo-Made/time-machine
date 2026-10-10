@@ -2,16 +2,17 @@
 
 A browser-based 3D historical exploration game. You are an invisible observer: you walk reconstructed places, shift between eras, and investigate what you find, without changing history.
 
-This repository holds a vertical slice. Four milestones are done:
+This repository holds a vertical slice. Five milestones are done:
 
 - **Milestone 01**: a graybox street you can explore in first person.
 - **Milestone 02**: time shift. Press T to switch the street between two layouts, labelled 1960 and 2026, without losing your position or view.
 - **Milestone 03**: the first authored asset. One building, modelled in Blender and exported as GLB, stands on the street in the 1960 layout. Everything else is still graybox.
 - **Milestone 04**: observation and discovery. Look at one of three points of interest, press E to inspect it, and it is recorded in a journal. Observing the same lot in both eras reveals one connection.
+- **Milestone 05**: research, with no change to the game. It chose the first real Lagos site to reconstruct and set the rules for doing so. See [docs/research/milestone-05/](docs/research/milestone-05/).
 
-There are no characters and no real historical content yet.
+There are no characters, and no real historical content in the game yet.
 
-> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Every observation and connection in the game is invented test content, and says so on screen. Nothing in this repository makes a historical claim.
+> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Every observation and connection in the game is invented test content, and says so on screen. Nothing in the game makes a historical claim. The research notes in `docs/research/` do, and each one cites its source.
 
 ## Run it
 
@@ -100,7 +101,7 @@ src/
   state/    One Zustand store for slow-changing game state
 assets/     Blender source files, the scripts that build and export them, previews
 e2e/        Browser tests
-docs/       Architecture notes
+docs/       Architecture notes, and research for the first real site
 ```
 
 Exported models live in `src/render/models/`. How a model is made, exported, limited and measured is in [assets/README.md](assets/README.md). Blender is needed only to change a model, not to run, build or test the game.
