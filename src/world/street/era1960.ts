@@ -11,6 +11,7 @@ import {
   sharedSurfaces,
   SPAWN,
 } from './layout'
+import { pointsOfInterest1960 } from './pointsOfInterest'
 
 // FICTIONAL GRAYBOX TEST DATA. "1960" is a placeholder label for one of two
 // invented layouts of the same street. Nothing here is historically verified.
@@ -67,4 +68,5 @@ export const street1960: WorldDefinition = {
     crate('crate-yard-1', 18.5, -28.5, 1.2),
     crate('crate-yard-2', 17.1, -28.8, 0.9),
   ],
+  pointsOfInterest: pointsOfInterest1960,
 }

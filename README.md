@@ -2,15 +2,16 @@
 
 A browser-based 3D historical exploration game. You are an invisible observer: you walk reconstructed places, shift between eras, and investigate what you find, without changing history.
 
-This repository holds a vertical slice. Three milestones are done:
+This repository holds a vertical slice. Four milestones are done:
 
 - **Milestone 01**: a graybox street you can explore in first person.
 - **Milestone 02**: time shift. Press T to switch the street between two layouts, labelled 1960 and 2026, without losing your position or view.
 - **Milestone 03**: the first authored asset. One building, modelled in Blender and exported as GLB, stands on the street in the 1960 layout. Everything else is still graybox.
+- **Milestone 04**: observation and discovery. Look at one of three points of interest, press E to inspect it, and it is recorded in a journal. Observing the same lot in both eras reveals one connection.
 
-There are no characters, discoveries or real historical content yet.
+There are no characters and no real historical content yet.
 
-> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Nothing in this repository makes a historical claim.
+> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Every observation and connection in the game is invented test content, and says so on screen. Nothing in this repository makes a historical claim.
 
 ## Run it
 
@@ -29,6 +30,9 @@ Open the address it prints, then click the page to take control.
 | Mouse | Look around |
 | Shift | Run |
 | T | Shift to the other era |
+| E | Inspect what you are looking at; press again to close |
+| J | Open or close the journal |
+| PgUp, PgDn | Scroll the journal, if the window is too short to show it all |
 | Esc | Release the mouse |
 | P | Show or hide the performance readout |
 
@@ -45,6 +49,28 @@ The game starts in the 2026 layout. T switches to the other layout; the label at
 The modelled building is on the east side, a few steps ahead of where you start. It exists only in the 1960 layout: shift there and it appears; shift back and its lot is open ground.
 
 Other places to try it: the alley on the west side (open in 1960, built over in 2026), the lot between the two northern buildings on the east side (a yard in 1960, a building in 2026), and the open lot with benches on the east side (open in 2026, a building in 1960).
+
+## Observing
+
+Three places can be inspected: a building and a passage in the 1960 layout, and an open lot in 2026. A small pale marker shows where each is once you are close.
+
+To inspect something you have to be **near it, looking at it, with nothing in the way**. When all three hold, a prompt appears under the crosshair and E opens a panel. The two locations (the lot and the passage) need you to look at their ground or the things standing on it; a level gaze across them does not count.
+
+What you inspect is recorded in the journal, once, with the era it was seen in. Inspect the building in 1960 and the open lot on the same site in 2026, in either order, and the journal gains a connection between them.
+
+![The journal with all three observations and the connection](docs/screenshots/discovery-journal.png)
+
+Everything is sorted into three kinds, and they are kept apart in the data as well as on screen:
+
+| Kind | Meaning |
+|---|---|
+| Observed | What a person standing there could see. No names, uses, dates or reasons. |
+| Inferred | What follows from comparing observations. Only connections hold these. |
+| Not known | What cannot be told from looking, stated plainly. |
+
+The one connection is deliberately cautious. It quotes what was observed in each era, infers only that the site's built environment changed, and lists when, why and what happened in between as not known. It names no event.
+
+Neither panel pauses the game or releases the mouse: you can walk, look and shift era with both open. A panel closes when you press E again, walk well away, shift era, or release the mouse.
 
 ## Commands
 
@@ -68,6 +94,7 @@ src/
   world/    Places, as plain data: the two street layouts, collision boxes
   player/   Movement and collision (pure functions) and the first-person controller
   era/      Which eras exist, and what shifting between them does to the player
+  discovery/  What the player is looking at, the journal, and the keys for both
   render/   React Three Fiber components that draw a world
   ui/       The HUD
   state/    One Zustand store for slow-changing game state
@@ -94,6 +121,17 @@ Time shift:
 - **A shift can be refused close to open ground.** Backing out only goes through the thing you would overlap, so being a little inside new geometry with that side blocked is refused even if free space is near.
 - **The crossing check is sampled.** The path of a backed-out arrival is tested at intervals of a quarter of the player's radius, which leaves about 1 cm of tolerance at its edges. The arrival point itself is checked exactly.
 
+Observation and discovery:
+
+- **Three points of interest and one connection.** All invented.
+- **The journal is not saved.** It is empty again after a reload.
+- **Sight and targets are boxes, not what is drawn.** The building's open veranda counts as solid, and round props as square. At grazing angles what you see and what the game allows can differ slightly.
+- **Locations need a downward look**, as described above. This may need tuning.
+- **The connection is written by hand.** The game does not work out that two observations are of the same place.
+- **The wording check is a tripwire.** A test rejects words that assert an event, cause, date or use, but it cannot judge a sentence.
+- **The journal covers the right third of the view** while open.
+- **Screen-reader support is limited** to announcing the inspection panel.
+
 Authored models:
 
 - **One model, in one era.** The rest of the street is graybox.
@@ -119,4 +157,4 @@ Presentation and tooling:
 - **The production build warns about a large chunk.** That is three.js; code splitting is not set up yet.
 - **Only Chrome is tested.**
 
-Not started, by design: real historical content, AI characters, missions, discoveries, saving, and any backend.
+Not started, by design: real historical content with sources, AI characters, missions, saving, and any backend.

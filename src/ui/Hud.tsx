@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { isShortcut } from '../keys'
 import { useGameStore } from '../state/gameStore'
+import { FocusPrompt } from './FocusPrompt'
+import { InspectionPanel } from './InspectionPanel'
+import { Journal } from './Journal'
 import './hud.css'
 
 const CONTROLS = [
@@ -8,6 +11,8 @@ const CONTROLS = [
   { keys: ['Mouse'], action: 'Look around' },
   { keys: ['Shift'], action: 'Run' },
   { keys: ['T'], action: 'Shift era' },
+  { keys: ['E'], action: 'Inspect what you are looking at' },
+  { keys: ['J'], action: 'Open or close the journal' },
   { keys: ['Esc'], action: 'Release the mouse' },
   { keys: ['P'], action: 'Show or hide performance' },
 ] as const
@@ -39,6 +44,7 @@ export function Hud() {
   const engaged = useGameStore((state) => state.engaged)
   const era = useGameStore((state) => state.era)
   const notice = useGameStore((state) => state.notice)
+  const focused = useGameStore((state) => state.focus !== null)
   const perfVisible = useGameStore((state) => state.perfVisible)
   const togglePerf = useGameStore((state) => state.togglePerf)
 
@@ -67,10 +73,14 @@ export function Hud() {
 
       {engaged ? (
         <>
-          <div className="hud-crosshair" />
+          <div className={focused ? 'hud-crosshair hud-crosshair-focused' : 'hud-crosshair'} />
+          <FocusPrompt />
+          <InspectionPanel />
+          <Journal />
+          {/* Movement keys are taught on the start card; this line is for the rest. */}
           <p className="hud-hint">
-            <kbd>WASD</kbd> move · <kbd>Mouse</kbd> look · <kbd>Shift</kbd> run · <kbd>T</kbd>{' '}
-            shift era · <kbd>Esc</kbd> release
+            <kbd>T</kbd> shift era · <kbd>E</kbd> inspect · <kbd>J</kbd> journal · <kbd>Esc</kbd>{' '}
+            release
           </p>
         </>
       ) : (

@@ -7,7 +7,7 @@ import type { Surroundings, WorldDefinition } from '../world/types'
 // note at the top of world/street/layout.ts.
 export type EraId = '1960' | '2026'
 
-const ERA_ORDER: readonly EraId[] = ['1960', '2026']
+export const ERA_ORDER: readonly EraId[] = ['1960', '2026']
 
 export const INITIAL_ERA: EraId = '2026'
 

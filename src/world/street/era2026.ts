@@ -11,6 +11,7 @@ import {
   sharedSurfaces,
   SPAWN,
 } from './layout'
+import { pointsOfInterest2026 } from './pointsOfInterest'
 
 // FICTIONAL GRAYBOX TEST DATA. "2026" is a placeholder label for one of two
 // invented layouts of the same street. Nothing here is historically verified.
@@ -55,4 +56,5 @@ export const street2026: WorldDefinition = {
     prop('bench-park-2', 'bench', 10, 24.5, 0.6, 2, 0.5),
     crate('planter-park', 16.5, 22.5, 1.5),
   ],
+  pointsOfInterest: pointsOfInterest2026,
 }

@@ -16,6 +16,14 @@ interface DebugHandle {
   violations: number
   /** Authored models currently in the scene, by the id of the entity they show. */
   models: Record<string, MountedModel>
+  /** Point-of-interest markers currently in the scene, by point-of-interest id. */
+  markers: Record<string, MarkerState>
+}
+
+interface MarkerState {
+  visible: boolean
+  /** Must stay true: it is what lets geometry in front hide the marker. */
+  depthTest: boolean
 }
 
 interface MountedModel {
@@ -33,7 +41,7 @@ declare global {
 }
 
 export function installDebugHandle() {
-  window.__TM__ = { store: useGameStore, player: null, violations: 0, models: {} }
+  window.__TM__ = { store: useGameStore, player: null, violations: 0, models: {}, markers: {} }
 }
 
 /**
@@ -82,4 +90,12 @@ export function trackModel(entityId: string, asset: string, object: Object3D) {
     cancelAnimationFrame(frame)
     delete debug.models[entityId]
   }
+}
+
+/** Records a marker's state each frame; null removes it. */
+export function reportMarker(poiId: string, state: MarkerState | null) {
+  const debug = window.__TM__
+  if (!debug) return
+  if (state) debug.markers[poiId] = state
+  else delete debug.markers[poiId]
 }

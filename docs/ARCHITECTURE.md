@@ -1,8 +1,8 @@
 # Architecture
 
-This describes how Time Machine is put together as of Milestone 03, and how the systems that are not built yet are expected to fit.
+This describes how Time Machine is put together as of Milestone 04, and how the systems that are not built yet are expected to fit.
 
-> **The street data is fictional.** The 1960 and 2026 layouts are graybox test environments. They are not historically verified reconstructions of Lagos or of any other place, and the year labels are placeholders for two test datasets. The one authored model is a fictional architectural study.
+> **The street data is fictional.** The 1960 and 2026 layouts are graybox test environments. They are not historically verified reconstructions of Lagos or of any other place, and the year labels are placeholders for two test datasets. The one authored model is a fictional architectural study, and every observation and connection is invented test content.
 
 ## The one rule
 
@@ -24,7 +24,7 @@ State is split by how often it changes.
 |---|---|---|
 | World layouts: buildings, props, bounds, spawn | Immutable data in `src/world/` | Testable without a browser; an era is a dataset |
 | Player position and view, changing every frame | A ref inside `PlayerController`, written to the camera in `useFrame` | Moving never causes a React render |
-| Game state: whether the player has control, the active era, a notice, the perf panel, a player snapshot (10 per second), a perf sample (2 per second) | Zustand store in `src/state/gameStore.ts` | The HUD, the renderer, the console and the browser tests read it |
+| Game state: whether the player has control, the active era, a notice, what is focused, what is being inspected, whether the journal is open, the journal itself, the perf panel, a player snapshot (10 per second), a perf sample (2 per second) | Zustand store in `src/state/gameStore.ts` | The HUD, the renderer, the console and the browser tests read it |
 
 Holding per-frame values in React state or in the store is the mistake to avoid: it re-renders components 60 times a second and causes stutter.
 
@@ -43,7 +43,7 @@ Every entity in a world has an `id`. The rules, also written on `Footprint` in `
 
 Tests enforce what can be checked: ids are unique per era, a shared id stays in the same collection (a building stays a building), and the two footprints of a shared id overlap.
 
-There is no type-level distinction between an entity and its representation. Nothing reads ids across eras yet; the discovery system will be the first.
+There is no type-level distinction between an entity and its representation. Nothing matches entities across eras automatically. A point of interest may name the entity it is about, but only within its own era; the one link between eras is a connection written by hand.
 
 ## Systems
 
@@ -68,7 +68,7 @@ Turns input into camera movement. It has three layers:
   - `getSurroundings()` returns the colliders and bounds to use and is called once at the start of every frame.
   - A `ref` handle offers `getState()`, the live state, and `teleport(x, z)`, which moves the player and cannot change the view direction.
 
-**Input rules.** Gameplay input (movement, look, T) acts only while the player has control, meaning the mouse is captured. Interface keys (P) work at any time. A key pressed together with Cmd, Ctrl or Alt belongs to the browser and is ignored. Held keys are dropped when control is lost or the window loses focus.
+**Input rules.** Gameplay input (movement, look, T, E, J) acts only while the player has control, meaning the mouse is captured. One-shot keys (T, E, J) also ignore key repeat. Interface keys (P) work at any time. A key pressed together with Cmd, Ctrl or Alt belongs to the browser and is ignored. Held keys are dropped when control is lost or the window loses focus.
 
 ### Era system (built in Milestone 02)
 
@@ -112,11 +112,53 @@ A building can be shown as a model made in Blender instead of a box. How models 
 
 There is no asset manager. One table maps model names to files, and a model file is named after its asset.
 
-### Discovery system (not built)
+### Observation and discovery (built in Milestone 04)
 
-Will own the things a player can find: each anchored to an entity id or a position, with rules for when the player is close enough and looking at it, and a record of what has been found.
+The first gameplay loop: explore, observe, discover, connect. The player stays an observer; none of this changes the world.
 
-It will read the player state and the world data and never write to the world. That matches the game's premise that the observer cannot change history. The id rules above are what will let a discovery refer to the same building in both eras.
+**Content is world data, in three kinds.** `world/types.ts` defines `Observed`, `Inferred` and `Unknown` statements, and the types keep them apart:
+
+- A `PointOfInterest` holds observed and unknown statements only. It cannot hold an inference.
+- A `Connection` holds inferred and unknown statements only. It cannot claim an observation; the facts it rests on are shown by quoting the first statement of each point of interest it links.
+- Both carry `provenance`, which has one allowed value today, `'fictional'`. Real content would add a value that requires sources.
+
+A point of interest belongs to the one era whose `WorldDefinition` lists it, which is how era availability works for entities too. Connections link two points of interest in different eras and live beside the layouts in `world/street/connections.ts`. The content files open with the writing rules: observed means only what could be seen; nothing explains why anything is as it is.
+
+**Focus: what the player is looking at.** `discovery/focus.ts` has one pure function, `findFocus`. It casts the line of view from the eye, using yaw and pitch, and a point of interest is focused when the line:
+
+1. enters its target box from outside (direction),
+2. does so within its range (distance), and
+3. meets nothing else first (line of sight).
+
+- **Targets are boxes, not points or spheres.** A sphere fails up close: standing at a building's wall puts the eye inside a sphere big enough to cover its front, and then every direction counts. A box has to be entered.
+- **A location's target stops below eye height.** The player can walk into the open lot and the passage, and a tall volume would contain the eye. So a location is focused by looking at its ground or what stands on it.
+- **Aim margin.** The target counts as slightly larger, by 1.5 degrees of angle, so distant targets do not need pixel accuracy. The currently focused one is held a little more loosely to stop the prompt flickering.
+- **Occluders** are every building and prop of the active era as a box of its real height, from `discovery/sight.ts`. The view passes over a bench but not through a wall. This is separate from collision, which only knows footprints. A point of interest's own entity never hides it, and things standing inside a target do not block it.
+
+**Nothing from another era can be focused or recorded**, because `findFocus` is only ever given the active era's points of interest and occluders.
+
+**The journal** is plain data and pure functions in `discovery/journal.ts`, held in the store. No React component owns it.
+
+- `discover` adds an entry once; a repeat returns the same journal.
+- `inspect` is what pressing E does: it records the focused point of interest only if it is in the active era's list.
+- Which connections are unlocked is worked out from the entries every time and never stored, so the two cannot disagree. A connection unlocks when both of its points of interest have been discovered, in either order.
+
+**Keys and timing.** `discovery/useDiscoveryKeys.ts` handles E and J the way `useShiftKey.ts` handles T. On E it works out the focus again, from the live player and the era as they are at that instant, so a discovery is never based on an earlier frame. `discovery/FocusProbe.tsx` runs `findFocus` once per frame for the prompt and writes to the store only when the answer changes.
+
+**The panels are overlays and nothing more.** The inspection panel and the journal take no input, do not pause the game and never request or release pointer lock, so they cannot interfere with movement, Time Shift or collision. They sit on opposite edges of the screen and stop short of the centre, so neither covers the crosshair or the prompt.
+
+| Event | Effect |
+|---|---|
+| E, looking at a point of interest that is not the one open | Opens its panel and records the discovery |
+| E, otherwise, with a panel open | Closes the panel |
+| J | Opens or closes the journal |
+| Walking further than 1.5 times the range away | Closes the panel |
+| Accepted Time Shift | Closes the panel; the journal stays |
+| Losing control | Closes both |
+
+**No stale panel after a shift, guarded twice.** `setEra` clears the open inspection and the focus in the same store update that changes the era. Independently, an inspection records the era it was opened in, and the panel gets its content only through `shownInspection`, which refuses an inspection from any other era and looks only in the active era's list. Either guard alone is enough.
+
+**Markers** (`render/PoiMarkers.tsx`) show where something can be inspected. They are kept quiet so that exploring does not become chasing icons: ordinary depth testing, so anything in front hides them; shown only when the player is nearly in range; gone once the point of interest is discovered.
 
 ## Biggest technical risks
 
@@ -126,6 +168,8 @@ It will read the player state and the world data and never write to the world. T
 4. **Per-frame state leaking into React.** See "Where state lives". This is a discipline, not something the compiler enforces.
 5. **Input and platform.** Pointer lock has quirks: Chrome refuses to re-capture for about a second after Esc, Safari behaves differently, and it is blocked inside some iframes. There is no touch or gamepad support.
 6. **Testing 3D automatically.** Tests can prove movement, collision, shifting and that the page renders. They cannot judge frame rate on a given machine, how the mouse feels, or how the scene looks.
+7. **Integrity of content.** The types stop an inference being filed as an observation, and a test rejects words that assert an event, cause, date or use. Neither can judge whether a sentence is true or fair. Once real history is involved, every statement will need a source and a human review; the `provenance` field is where that requirement will be enforced.
+8. **Sight is tested against boxes.** What the player can inspect is decided by footprints and heights, not by the meshes that are drawn. With one model that is a small mismatch; with many detailed ones it will be noticeable, and focus may need to test real geometry.
 
 ## Testing
 
@@ -135,7 +179,11 @@ It will read the player state and the world data and never write to the world. T
   - each street layout, with a long scripted wander asserting the player never ends up inside a solid, and the id rules across layouts;
   - `shiftPlayer` over a half-metre grid of the whole street in both directions, repeated switching, view preservation for every outcome, and a stand-in frame loop that shifts between consecutive movement steps;
   - model placement for all four facings;
+  - lines of view against boxes, and `findFocus`, both on made-up geometry and from named first-person viewpoints on the real street, including ones where the player is close to something but clearly looking elsewhere;
+  - the journal, the connection, the stale-panel guard and the store's rules;
+  - the content itself: its structure, that every point of interest can be focused from somewhere a player can stand, and a wording check;
+  - the whole loop with no browser: observe in one era, shift, observe in the other, connect;
   - the exported model itself, loaded with three's own loader: its ceilings, scale and orientation, and its fit on its lot.
-- **Browser tests** (`e2e/`, Playwright) load the real game, click in, walk, strafe into a building, move the mouse, shift era in each of the three ways, shift repeatedly while moving, and check the HUD and the input rules. They also check that the model appears on its lot in 1960 and is gone in 2026, and that with the model file blocked the game still runs with the graybox box and the same collision. They read game state through `window.__TM__`, a handle installed only in development builds.
+- **Browser tests** (`e2e/`, Playwright) load the real game, click in, walk, strafe into a building, move the mouse, shift era in each of the three ways, shift repeatedly while moving, and check the HUD and the input rules. They also check that the model appears on its lot in 1960 and is gone in 2026, and that with the model file blocked the game still runs with the graybox box and the same collision. For discovery they aim the view with real mouse movement and check the prompt, inspecting, the journal, the connection, that nothing can be inspected through a wall or from another era, that the panels do not interfere with moving, shifting or colliding, and how pause, key repeat and shifting with a panel open behave. They read game state through `window.__TM__`, a handle installed only in development builds.
 
 Camera preservation in the real controller is tested in the browser, because there is no React test harness in the project.

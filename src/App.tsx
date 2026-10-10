@@ -1,6 +1,8 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { watchPlayer } from './debug'
+import { FocusProbe } from './discovery/FocusProbe'
+import { useDiscoveryKeys } from './discovery/useDiscoveryKeys'
 import { INITIAL_ERA, SURROUNDINGS, WORLDS } from './era/eras'
 import { useShiftKey } from './era/useShiftKey'
 import { DEFAULT_PLAYER_CONFIG } from './player/movement'
@@ -21,12 +23,14 @@ const getSurroundings = () => SURROUNDINGS[useGameStore.getState().era]
 function App() {
   const engaged = useGameStore((state) => state.engaged)
   const era = useGameStore((state) => state.era)
+  const journal = useGameStore((state) => state.journal)
   const setEngaged = useGameStore((state) => state.setEngaged)
   const setPlayer = useGameStore((state) => state.setPlayer)
   const setPerf = useGameStore((state) => state.setPerf)
 
   const player = useRef<PlayerHandle>(null)
   useShiftKey(player, config.radius)
+  useDiscoveryKeys(player, config.eyeHeight)
 
   useEffect(() => {
     if (import.meta.env.DEV) return watchPlayer(player, config.radius)
@@ -41,7 +45,7 @@ function App() {
         camera={{ fov: 70, near: 0.1, far: 250 }}
         style={{ cursor: engaged ? 'none' : 'pointer' }}
       >
-        <Scene era={era} />
+        <Scene era={era} journal={journal} player={player} eyeHeight={config.eyeHeight} />
         <PointerLock onChange={setEngaged} />
         <PlayerController
           ref={player}
@@ -51,6 +55,7 @@ function App() {
           config={config}
           onSnapshot={setPlayer}
         />
+        <FocusProbe player={player} eyeHeight={config.eyeHeight} />
         <PerfProbe onSample={setPerf} />
       </Canvas>
       <Hud />
