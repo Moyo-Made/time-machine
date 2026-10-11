@@ -107,7 +107,25 @@ const SAMPLE: Site = {
           },
         ],
         buildings: [
-          { id: 'house', kind: 'house', ...box, evidence: { basis: 'evidenced', sources: ['T-before', 'T-plan'] } },
+          {
+            id: 'house',
+            kind: 'house',
+            ...box,
+            evidence: { basis: 'evidenced', sources: ['T-before', 'T-plan'] },
+            // A model in parts: one seen that day, one never recorded.
+            model: {
+              asset: 'merchant-house',
+              facing: 'south',
+              parts: [
+                {
+                  name: 'front',
+                  label: 'Fixture front',
+                  evidence: { basis: 'evidenced', sources: ['T-before'], assumption: 'Fixture detail is simplified.' },
+                },
+                { name: 'back', label: 'Fixture back', evidence: { basis: 'placeholder', sources: [] } },
+              ],
+            },
+          },
           { id: 'neighbour', kind: 'house', ...box, x: 6, evidence: { basis: 'placeholder', sources: [] } },
         ],
         pointsOfInterest: [front],
@@ -126,6 +144,7 @@ const SAMPLE: Site = {
   initialEra: 'fixture-before' as EraId,
   connections: [changed],
   gridRotation: 30,
+  atmosphere: { sun: { x: 0, y: 1, z: 0 }, haze: [50, 200] },
 }
 
 // The same data with nothing read-only and nothing checked, for breaking on purpose.
@@ -134,10 +153,15 @@ interface LooseStatement {
   text: string
   sources?: string[]
 }
+interface LooseEvidence {
+  basis: string
+  sources: string[]
+  assumption?: string
+}
 interface LooseEntity {
   id: string
-  evidence?: { basis: string; sources: string[]; assumption?: string }
-  model?: { asset: string; facing: string }
+  evidence?: LooseEvidence
+  model?: { asset: string; facing: string; parts?: { name: string; label: string; evidence?: LooseEvidence }[] }
 }
 interface LoosePoi {
   id: string
@@ -234,8 +258,43 @@ describe('integrity of documented content', () => {
     ],
     [
       'a placeholder shown with an authored model',
-      (copy) => (before(copy).buildings[1]!.model = { asset: 'merchant-house', facing: 'south' }),
+      (copy) => (before(copy).buildings[1]!.model = structuredClone(before(copy).buildings[0]!.model!)),
       'placeholder-claims',
+    ],
+    [
+      'a model that does not say what its parts rest on',
+      (copy) => delete before(copy).buildings[0]!.model!.parts,
+      'no-basis',
+    ],
+    [
+      'a part of a model with no stated basis',
+      (copy) => delete before(copy).buildings[0]!.model!.parts![0]!.evidence,
+      'no-basis',
+    ],
+    [
+      'an evidenced part that does not say what was simplified',
+      (copy) => delete before(copy).buildings[0]!.model!.parts![0]!.evidence!.assumption,
+      'no-assumption',
+    ],
+    [
+      'an evidenced part resting only on a photograph of another day',
+      (copy) => (before(copy).buildings[0]!.model!.parts![0]!.evidence!.sources = ['T-after']),
+      'out-of-era',
+    ],
+    [
+      'a part citing a source that is not registered',
+      (copy) => (before(copy).buildings[0]!.model!.parts![0]!.evidence!.sources = ['T-before', 'T-nowhere']),
+      'source-missing',
+    ],
+    [
+      'two parts of one model with the same name',
+      (copy) => (before(copy).buildings[0]!.model!.parts![1]!.name = 'front'),
+      'duplicate-id',
+    ],
+    [
+      'a part with no label',
+      (copy) => (before(copy).buildings[0]!.model!.parts![1]!.label = ' '),
+      'empty-text',
     ],
     [
       'a placeholder described by a point of interest',
@@ -294,7 +353,7 @@ describe('integrity of documented content', () => {
     for (const [name, change, rule] of cases) {
       // A point of interest renamed to clash with another also orphans the
       // connection that named it, so that case reports two rules.
-      if (rule === 'duplicate-id') continue
+      if (name.includes('point of interest id')) continue
       expect(rules(broken(change)), name).toEqual([rule])
     }
   })
@@ -332,6 +391,15 @@ describe('integrity of fictional content', () => {
 
   it('rejects a fictional era that carries a date', () => {
     expect(street((copy) => (copy.site.eras[0]!.date = day('1960-01-01', 'estimated')))).toContain('era-date')
+  })
+
+  it('rejects a fictional model that is divided into evidence parts', () => {
+    expect(
+      street((copy) => {
+        const modelled = copy.site.eras[0]!.world.buildings.find((building) => building.model)!
+        modelled.model!.parts = [{ name: 'front', label: 'Front', evidence: { basis: 'placeholder', sources: [] } }]
+      }),
+    ).toContain('provenance-mixed')
   })
 
   it('rejects a documented record in a fictional site', () => {

@@ -10,19 +10,19 @@ export const PROVENANCE_LABEL: Record<Provenance, string> = {
 export const SITE_NOTE: Record<Provenance, string> = {
   fictional: 'A fictional graybox test street. Not a historical reconstruction of any real place.',
   documented:
-    'A graybox reconstruction of a real plot, from cited sources. Sizes are estimates and the surroundings are placeholders.',
+    'A simplified reconstruction of a real plot, from cited sources. Sizes are estimates and the surroundings are placeholders.',
 }
 
 /** Beside the site's name, while the player is in it. */
 export const SITE_KIND: Record<Provenance, string> = {
   fictional: 'fictional test site',
-  documented: 'graybox reconstruction',
+  documented: 'simplified reconstruction',
 }
 
 /** Shown on arriving at a site. */
 export const ARRIVAL_NOTICE: Record<Provenance, string> = {
   fictional: 'A fictional test street. Nothing here is a historical record.',
-  documented: 'A real plot, rebuilt in plain boxes. Sizes are estimates. Press V to see what each thing rests on.',
+  documented: 'A real plot, rebuilt in simplified form. Sizes are estimates. Press V to see what each thing rests on.',
 }
 
 /** The evidence view's legend: what each colour means, in the order shown. */

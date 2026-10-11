@@ -2,7 +2,7 @@
 
 A browser-based 3D historical exploration game. You are an invisible observer: you walk reconstructed places, shift between eras, and investigate what you find, without changing history.
 
-This repository holds a vertical slice. Six milestones are done:
+This repository holds a vertical slice. Seven milestones are done:
 
 - **Milestone 01**: a graybox street you can explore in first person.
 - **Milestone 02**: time shift. Press T to switch the street between two layouts, labelled 1960 and 2026, without losing your position or view.
@@ -11,6 +11,7 @@ This repository holds a vertical slice. Six milestones are done:
 - **Milestone 05**: research, with no change to the game. It chose the first real Lagos site to reconstruct and set the rules for doing so. See [docs/research/milestone-05/](docs/research/milestone-05/).
 
 - **Milestone 06**: the first real site, in plain boxes. A plot on Tinubu Square, Lagos, on two days in 2016, with seven things to inspect and every statement tied to a source. See "The first real site" below.
+- **Milestone 07**: atmosphere. The real site's building has a simplified model, built from the photographs and coloured by what each part of it rests on; the props have simple shapes and colours; the site has its own light; a shift is shown by a short veil; and there is sound, all of it generated in code.
 
 There are no characters.
 
@@ -37,6 +38,8 @@ Open the address it prints, then click the page to take control.
 | J | Open or close the journal |
 | G | Go to the next site |
 | V | At the real site: colour everything by what it rests on |
+| M | Sound on or off |
+| [ and ] | Quieter or louder |
 | PgUp, PgDn | Scroll the journal, if the window is too short to show it all |
 | Esc | Release the mouse |
 | P | Show or hide the performance readout |
@@ -50,6 +53,8 @@ The game starts in the 2026 layout. T switches to the other layout; the label at
 - **If the spot you stand on is clear in the other era**, you arrive on exactly the same spot, looking the same way.
 - **If something stands there in the other era**, you are backed out of it by up to 2 m, but only out of the thing you would overlap and never across another wall.
 - **If there is no such way out**, the shift is refused, nothing changes, and a message says so.
+
+A shift that happens is shown by a pale veil that is fully there on the first frame and fades over half a second, with the name of the era you have arrived in for a second or so. The shift itself is instant and is over before the veil appears: nothing waits for it and it takes no input. A refused shift shows no veil, and sounds different. If your system asks for reduced motion, the veil is left out. However fast T is pressed, every press shifts, but the screen is veiled at most once every four tenths of a second.
 
 The modelled building is on the east side, a few steps ahead of where you start. It exists only in the 1960 layout: shift there and it appears; shift back and its lot is open ground.
 
@@ -85,10 +90,12 @@ Neither panel pauses the game or releases the mouse: you can walk, look and shif
 | `npm run build` | Type-check and produce a production build in `dist/` |
 | `npm run typecheck` | Strict TypeScript check of the game, config and tests |
 | `npm run lint` | Lint with Oxlint |
-| `npm test` | Unit tests (Vitest) for movement, collision, the layouts and shifting |
+| `npm test` | Unit tests (Vitest): movement, collision, shifting, the content's integrity rules, both models, the sound's rules |
 | `npm run test:e2e` | Browser tests (Playwright): load the game and play it |
-| `npm run asset:export` | Export the Blender source file to the GLB the game loads. Needs Blender |
-| `npm run asset:generate` | Rebuild the Blender source file from its script. Needs Blender; see the warning in [assets/README.md](assets/README.md) |
+| `npm run measure` | Walk a fixed route through every scene and write frame times, draw calls and triangles to `test-results/measurements.md` |
+| `npm run asset:export` | Export the merchant house's Blender file to the GLB the game loads. Needs Blender |
+| `npm run asset:generate` | Rebuild the merchant house's Blender file from its script. Needs Blender; see the warning in [assets/README.md](assets/README.md) |
+| `npm run asset:export:ilojo`, `npm run asset:generate:ilojo` | The same two steps for the Casa do Fernandez model |
 
 The browser tests start their own dev server on port 5199 and drive the Google Chrome installed on your machine. To use Playwright's own browser instead, run `npx playwright install chromium` and delete the `channel: 'chrome'` line in `playwright.config.ts`. They save screenshots of the street in both eras under `test-results/`.
 
@@ -102,11 +109,12 @@ src/
   era/      Which eras exist, and what shifting between them does to the player
   discovery/  What the player is looking at, the journal, and the keys for both
   render/   React Three Fiber components that draw a world
+  audio/    Sound, synthesised in code: the engine, its settings, which cue answers what
   ui/       The HUD
   state/    One Zustand store for slow-changing game state
 assets/     Blender source files, the scripts that build and export them, previews
 e2e/        Browser tests
-docs/       Architecture notes, and research for the first real site
+docs/       Architecture notes, research for the first real site, and its art direction and measurements
 ```
 
 Exported models live in `src/render/models/`. How a model is made, exported, limited and measured is in [assets/README.md](assets/README.md). Blender is needed only to change a model, not to run, build or test the game.
@@ -125,14 +133,16 @@ It is shown on two days, and T moves between them:
 
 | Day | What is there | Dated by |
 |---|---|---|
-| 1 August 2016 | The building, as a plain mass, with the market and minibuses in front | Two photographs with that camera date |
+| 1 August 2016 | The building, as a simplified model, with the market and minibuses in front | Two photographs with that camera date |
 | 18 September 2016 | The cleared plot: rubble, a part-removed fence and a signboard | Ten photographs published that day |
 
-![The plot on 1 August 2016, in plain boxes](docs/screenshots/ilojo-1-august.png)
+![The plot on 1 August 2016](docs/screenshots/ilojo-1-august.png)
 
 ![The same plot on 18 September 2016](docs/screenshots/ilojo-18-september.png)
 
-**It is a graybox, not a model of the building.** Every shape is a box. The front is 18.6 m wide, from a deed sketch of 1914; the heights and depths are estimates from photographs. The building was measured in 2012 and those drawings were not used. What surrounds the plot is not reconstructed at all.
+**It is a simplified reconstruction, not a survey.** The building is a model made from the photographs: what could be counted or measured in them is there (two storeys, six arched openings, a balcony each, the pierced parapet); what could not is reduced to the plainest shape that keeps the outline. The front is 18.6 m wide, from a deed sketch of 1914; heights and depths are estimates. The building was measured in 2012 and those drawings were not used.
+
+Three things are deliberately plain. **The ground floor**, because the market hides it in every photograph of that day. **The figure on the parapet**, which is a pale block: its place is seen, its shape is not. And **everything around the plot**, which is not reconstructed and is drawn paler and flatter than the rest so that it reads as background. There are no textures, no lettering and no people. What each choice rests on is in [docs/milestone-07/art-direction.md](docs/milestone-07/art-direction.md).
 
 **Press V to see what each thing rests on.** Everything is coloured as one of three kinds, and a key on screen names them:
 
@@ -144,7 +154,7 @@ It is shown on two days, and T moves between them:
 
 ![The evidence view](docs/screenshots/ilojo-evidence-view.png)
 
-Nothing is marked as evidenced yet. That is deliberate: in a box world every size is an estimate, and the first thing that could honestly be called evidenced is a front modelled from the photographs, which does not exist yet.
+The building is in parts, because its parts rest on different things, and the key lists them. Two are evidenced: the upper floor and the parapet of the front, both seen in the photographs of 1 August. "Evidenced" here means that what the part shows (which features, how many, how arranged) can be seen in a photograph of that day. Its sizes may still be estimates, and each such part records what was simplified.
 
 ### What can be found there
 
@@ -167,21 +177,41 @@ The connection between the two days infers only that the plot's built environmen
 
 What is left out on purpose: people, the demolition itself, who was responsible and why, any lettering that could not be read, and every archival photograph. The photographs inform the boxes; none is shown or stored here. The reasoning is in [docs/research/milestone-05/reconstruction-boundaries.md](docs/research/milestone-05/reconstruction-boundaries.md).
 
+## Sound
+
+**Every sound is made in code. There are no audio files.** The ambience is filtered noise: a neutral outdoor wash, the same at every site and on every day, because nothing found says how any of them sounded. It is an artistic soundscape, not a recording of any place, and it imitates no voice, vehicle or event.
+
+| Sound | When |
+|---|---|
+| Ambience | While you have control |
+| A soft rise | A shift that happened |
+| A short low tick | A shift that was refused |
+| Two notes | A new observation |
+| Three notes | An observation that completes a connection |
+
+Nothing is created until you click into the game, so no sound can start before the browser allows it. It stops when you release the mouse, when the tab is hidden, and when the window loses the keyboard. M and the bracket keys work at any time, the start card has a button and a slider, and the choice is remembered in the browser.
+
 ## Known gaps
+
+Sound and light:
+
+- **One ambience everywhere.** It does not change with the place, the day or where you stand.
+- **The sun at the plot is an artistic assumption**: in front of the building and about 40 degrees up, for an afternoon. It is not computed from the date, because the building's bearing is itself an estimate.
+- **The veil is drawn by the page and the scene by the graphics card**, so the two can differ by a frame.
+
 
 The real site:
 
-- **Most of what is observed is not drawn.** The statements describe arches, balconies and a parapet; the screen shows a box. That gap closes only with a modelled front.
+- **The model is simplified on purpose.** Capitals are blocks, railings are plain bars, finials are balls. It is not a record of the building's detail.
 - **Sources are cited, not shown.** No photograph or map appears in the game.
 - **The assumption behind each estimate is in the data, not on screen.** The evidence view shows the kind, not the sentence.
 - **The evidence view relies on three colours.** They differ in lightness and are named on screen, but a box cannot be asked which kind it is.
-- **The sun is in the same place as on the street.** The site's grid is turned from north and the lighting does not follow.
 - **The edges are invisible.** Where the reconstruction stops, the player stops, and nothing is drawn to say why.
 
 
 Time shift:
 
-- **The change is an instant cut.** There is no transition and no preloading. At graybox scale the swap costs nothing measurable, so this does not yet show what shifting will cost with real assets.
+- **The change is still an instant cut**, under a veil. The two eras are never drawn together or blended.
 - **Two eras only**, switched in a fixed order.
 - **You can arrive somewhere enclosed.** The arrival is always free of solids, but it is not checked for a way out. Shift back to leave.
 - **A shift can be refused close to open ground.** Backing out only goes through the thing you would overlap, so being a little inside new geometry with that side blocked is refused even if free space is near.

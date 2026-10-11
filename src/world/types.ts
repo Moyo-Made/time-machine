@@ -45,7 +45,28 @@ export interface Footprint {
   readonly height: number
   /** What this rests on. Every entity of a documented site has one. */
   readonly evidence?: Evidence
+  /**
+   * A colour seen in the sources, by name. The renderer decides the exact
+   * shade. Left out, the entity is drawn in the plain graybox tones; a
+   * placeholder is always drawn pale, whatever this says.
+   */
+  readonly tone?: Tone
 }
+
+/** The colours the sources support, and no others. */
+export type Tone =
+  | 'render'
+  | 'brick'
+  | 'earth'
+  | 'asphalt'
+  | 'timber'
+  | 'rust'
+  | 'sheet'
+  | 'yellow'
+  | 'green'
+  | 'red'
+  | 'purple'
+  | 'blue'
 
 /**
  * How much of a modelled thing is evidence.
@@ -60,7 +81,10 @@ export interface Evidence {
   readonly basis: Basis
   /** May be empty only for a placeholder. */
   readonly sources: readonly SourceId[]
-  /** For an estimate: what was assumed, in plain words. */
+  /**
+   * For an estimate: what was assumed, in plain words. For an evidenced part
+   * of a model: what was simplified.
+   */
   readonly assumption?: string
 }
 
@@ -71,16 +95,33 @@ export interface Surface extends Footprint {
 export type Cardinal = 'north' | 'south' | 'east' | 'west'
 
 /** Names of the authored 3D models. The renderer maps each one to a file. */
-export type ModelAsset = 'merchant-house'
+export type ModelAsset = 'merchant-house' | 'ilojo-bar'
+
+/**
+ * One named part of a model, and what it rests on. A reconstruction is rarely
+ * all of one kind: a front seen in a photograph, a side seen in another, a
+ * rear nobody recorded. The model file carries only the names; this says what
+ * each one means.
+ */
+export interface ModelPart {
+  /** The mesh's name in the model file. */
+  readonly name: string
+  /** What the player reads. */
+  readonly label: string
+  readonly evidence: Evidence
+}
 
 /** Which model shows an entity in this era, and which way its front points. North is -z. */
 export interface ModelRef {
   readonly asset: ModelAsset
   readonly facing: Cardinal
+  /** Every part of the model, for a documented site. A test holds this to the file. */
+  readonly parts?: readonly ModelPart[]
 }
 
 export interface Building extends Footprint {
-  readonly kind: 'house' | 'wall'
+  /** A ruin is drawn with a broken top; it collides as its full box. */
+  readonly kind: 'house' | 'wall' | 'ruin'
   /**
    * Purely visual. Collision always comes from the footprint, so the world
    * behaves the same whether or not the model has loaded.
@@ -106,6 +147,8 @@ export type PropKind =
 
 export interface Prop extends Footprint {
   readonly kind: PropKind
+  /** For a lean-to: the side its roof slopes down towards. */
+  readonly facing?: Cardinal
 }
 
 /** A point in the world. Y is height above the ground. */
@@ -283,4 +326,14 @@ export interface Site {
    * its buildings and records the turn here.
    */
   readonly gridRotation: number
+  /** How the site is lit. An artistic choice, the same for all its eras. */
+  readonly atmosphere: Atmosphere
+}
+
+/** The light and the air of a site. */
+export interface Atmosphere {
+  /** The direction towards the sun, in the site's own grid. Y is up. */
+  readonly sun: Point3
+  /** Where the haze starts and where it is complete, in metres from the eye. */
+  readonly haze: readonly [near: number, far: number]
 }

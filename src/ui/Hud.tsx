@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { describeAudio } from '../audio/settings'
+import { claimsOf } from '../content/evidence'
 import { BASIS_MEANING, SITE_KIND, SITE_NOTE } from '../content/provenance'
 import { eraLabel, SITE_OF, WORLDS } from '../era/eras'
 import { isShortcut } from '../keys'
@@ -6,6 +8,7 @@ import { useGameStore } from '../state/gameStore'
 import { FocusPrompt } from './FocusPrompt'
 import { InspectionPanel } from './InspectionPanel'
 import { Journal } from './Journal'
+import { ShiftVeil } from './ShiftVeil'
 import './hud.css'
 
 const CONTROLS = [
@@ -17,6 +20,8 @@ const CONTROLS = [
   { keys: ['J'], action: 'Open or close the journal' },
   { keys: ['G'], action: 'Go to the next site' },
   { keys: ['V'], action: 'Show what each thing rests on' },
+  { keys: ['M'], action: 'Sound on or off' },
+  { keys: ['[', ']'], action: 'Quieter or louder' },
   { keys: ['Esc'], action: 'Release the mouse' },
   { keys: ['P'], action: 'Show or hide performance' },
 ] as const
@@ -50,8 +55,9 @@ function PerfPanel() {
  */
 function EvidenceLegend() {
   const era = useGameStore((state) => state.era)
-  const world = WORLDS[era]
-  const entities = [...world.surfaces, ...world.buildings, ...world.props]
+  const claims = claimsOf(WORLDS[era])
+  // A building shown by a model is in parts, and the parts differ. Name them.
+  const parts = claims.filter((claim) => claim.label !== undefined)
 
   return (
     <section className="hud-panel hud-evidence" aria-label="Evidence view" data-testid="evidence">
@@ -66,17 +72,61 @@ function EvidenceLegend() {
           <li key={basis} data-testid={`evidence-${basis}`}>
             <i className={`hud-swatch hud-swatch-${basis}`} />
             <span>
-              <strong>{name}</strong> ({entities.filter((entity) => entity.evidence?.basis === basis).length}):{' '}
+              <strong>{name}</strong> ({claims.filter((claim) => claim.evidence?.basis === basis).length}):{' '}
               {meaning}
             </span>
           </li>
         ))}
       </ul>
+      {parts.length > 0 && (
+        <>
+          <h3>The building, part by part</h3>
+          <ul data-testid="evidence-parts">
+            {parts.map((part) => (
+              <li key={part.id}>
+                <i className={`hud-swatch hud-swatch-${part.evidence?.basis ?? 'unmarked'}`} />
+                <span>{part.label}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   )
 }
 
-/** DOM overlay above the canvas. Never takes pointer events, so clicks reach the game. */
+/**
+ * Sound controls on the start card. The one part of the HUD that takes the
+ * mouse: a click here changes a setting and does not start the game.
+ */
+function SoundControls() {
+  const audio = useGameStore((state) => state.audio)
+  const toggleMute = useGameStore((state) => state.toggleMute)
+  const changeVolume = useGameStore((state) => state.changeVolume)
+
+  return (
+    <div className="hud-sound" data-testid="sound">
+      <button type="button" onClick={toggleMute} aria-pressed={!audio.muted} data-testid="sound-mute">
+        {audio.muted ? 'Sound off' : 'Sound on'}
+      </button>
+      <label>
+        <span>Volume</span>
+        <input
+          type="range"
+          min={0}
+          max={10}
+          step={1}
+          value={Math.round(audio.volume * 10)}
+          onChange={(event) => changeVolume(Number(event.target.value) - Math.round(audio.volume * 10))}
+          data-testid="sound-volume"
+        />
+      </label>
+      <p>An artistic soundscape made in code. Not a recording of any place.</p>
+    </div>
+  )
+}
+
+/** DOM overlay above the canvas. Takes no pointer events, so clicks reach the game, except the sound controls. */
 export function Hud() {
   const engaged = useGameStore((state) => state.engaged)
   const era = useGameStore((state) => state.era)
@@ -92,6 +142,13 @@ export function Hud() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.repeat || isShortcut(event)) return
       if (event.code === 'KeyP') togglePerf()
+      // Sound settings work whether or not the player has control.
+      if (event.code === 'KeyM' || event.code === 'BracketLeft' || event.code === 'BracketRight') {
+        const state = useGameStore.getState()
+        if (event.code === 'KeyM') state.toggleMute()
+        else state.changeVolume(event.code === 'BracketRight' ? 1 : -1)
+        state.showNotice(describeAudio(useGameStore.getState().audio))
+      }
       if (event.code === 'KeyV') {
         // A gameplay key: it does nothing unless the player has control.
         const state = useGameStore.getState()
@@ -106,6 +163,8 @@ export function Hud() {
 
   return (
     <div className="hud">
+      {/* First, so that everything else in the HUD is drawn over it. */}
+      <ShiftVeil />
       {perfVisible && <PerfPanel />}
 
       <div className="hud-era">
@@ -161,6 +220,7 @@ export function Hud() {
             <p className="hud-note" data-testid="site-note">
               {SITE_NOTE[site.provenance]}
             </p>
+            <SoundControls />
             <p className="hud-note hud-touch">A keyboard and mouse are needed for now.</p>
           </div>
         </div>

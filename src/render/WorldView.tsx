@@ -1,14 +1,14 @@
-import { BoxGeometry, CylinderGeometry, MeshStandardMaterial, PlaneGeometry } from 'three'
-import type { Basis, Footprint, Prop, Rect, Surface, WorldDefinition } from '../world/types'
+import { BoxGeometry, CylinderGeometry, PlaneGeometry, type MeshStandardMaterial } from 'three'
+import type { Building, Footprint, Prop, Rect, Surface, WorldDefinition } from '../world/types'
 import { ModelView } from './ModelView'
+import { basisOf, matte, toneOf } from './palette'
+import { Fence, Heap, LeanTo, Minibus, Rubble, Ruin, Signboard, Umbrella } from './shapes'
 
-// Every placeholder is a unit primitive scaled to its footprint, so the whole
+// Every plain solid is a unit primitive scaled to its footprint, so the whole
 // world shares three geometries and a handful of materials.
 const BOX = new BoxGeometry(1, 1, 1)
 const CYLINDER = new CylinderGeometry(0.5, 0.5, 1, 20)
 const PLANE = new PlaneGeometry(1, 1)
-
-const matte = (color: string) => new MeshStandardMaterial({ color, roughness: 0.95 })
 
 const GROUND = matte('#8a8c8a')
 const SURFACE: Record<Surface['kind'], MeshStandardMaterial> = {
@@ -22,19 +22,6 @@ const SURFACE: Record<Surface['kind'], MeshStandardMaterial> = {
 const WALL = matte('#7b7d7c')
 const HOUSE_TONES = [matte('#cdcecb'), matte('#b4b6b4'), matte('#a1a3a2')] as const
 const PROP = matte('#c2813c')
-
-// The evidence view: every entity in one of three flat colours, by what it
-// rests on. They differ in lightness as well as hue, and the HUD names them.
-const BASIS: Record<Basis, MeshStandardMaterial> = {
-  evidenced: matte('#2f7d4f'),
-  estimated: matte('#e2a93b'),
-  placeholder: matte('#c9cdd4'),
-}
-/** An entity with no stated basis. The integrity tests keep this from appearing. */
-const UNMARKED = matte('#b0408a')
-
-const basisOf = (footprint: Footprint) =>
-  footprint.evidence ? BASIS[footprint.evidence.basis] : UNMARKED
 
 const GROUND_MARGIN = 60
 
@@ -75,7 +62,9 @@ function Solid({ footprint: f, material, round = false, castShadow = true }: Sol
   )
 }
 
-function PropView({ prop, material }: { prop: Prop; material: MeshStandardMaterial }) {
+/** One prop. `flat` is set in the evidence view, where every piece takes one colour. */
+function PropView({ prop, flat }: { prop: Prop; flat: MeshStandardMaterial | undefined }) {
+  const material = flat ?? toneOf(prop, PROP)
   switch (prop.kind) {
     case 'lampPost':
       return (
@@ -98,53 +87,84 @@ function PropView({ prop, material }: { prop: Prop; material: MeshStandardMateri
     case 'bench':
     case 'cart':
     case 'car':
-    case 'umbrella':
-    case 'minibus':
-    case 'signboard':
-    case 'stall':
-    case 'heap':
-    case 'fence':
       return <Solid footprint={prop} material={material} />
+    case 'umbrella':
+      return <Umbrella entity={prop} flat={flat} />
+    case 'minibus':
+      return <Minibus entity={prop} flat={flat} />
+    case 'signboard':
+      return <Signboard entity={prop} flat={flat} />
+    case 'stall':
+      return <LeanTo entity={prop} flat={flat} />
+    case 'heap':
+      return <Heap entity={prop} flat={flat} />
+    case 'fence':
+      return <Fence entity={prop} flat={flat} />
   }
+}
+
+function SurfaceView({ surface, byBasis }: { surface: Surface; byBasis: boolean }) {
+  const flat = byBasis ? basisOf(surface) : undefined
+  return (
+    <>
+      <Solid footprint={surface} material={flat ?? toneOf(surface, SURFACE[surface.kind])} castShadow={false} />
+      {surface.kind === 'rubble' && <Rubble entity={surface} flat={flat} />}
+    </>
+  )
+}
+
+function BuildingView({
+  building,
+  index,
+  byBasis,
+  models,
+}: {
+  building: Building
+  index: number
+  byBasis: boolean
+  models: boolean
+}) {
+  const flat = byBasis ? basisOf(building) : undefined
+  if (building.kind === 'ruin') return <Ruin entity={building} flat={flat} />
+
+  const graybox = (
+    <Solid
+      footprint={building}
+      material={flat ?? toneOf(building, building.kind === 'wall' ? WALL : HOUSE_TONES[index % HOUSE_TONES.length]!)}
+    />
+  )
+  const { model } = building
+  if (!model || !models) return graybox
+  // A model with no stated parts has nothing to colour by, so its box stands in.
+  if (byBasis && !model.parts) return graybox
+  return <ModelView building={building} model={model} fallback={graybox} byBasis={byBasis} />
 }
 
 /**
  * Draws a WorldDefinition as placeholder geometry. Holds no state of its own.
- * With `byBasis`, everything is coloured by what it rests on instead.
+ * With `byBasis`, everything is coloured by what it rests on instead. With
+ * `models` off, a modelled building is drawn as its box.
  */
-export function WorldView({ world, byBasis = false }: { world: WorldDefinition; byBasis?: boolean }) {
+export function WorldView({
+  world,
+  byBasis = false,
+  models = true,
+}: {
+  world: WorldDefinition
+  byBasis?: boolean
+  models?: boolean
+}) {
   return (
     <group>
       <Ground bounds={world.bounds} />
       {world.surfaces.map((surface) => (
-        <Solid
-          key={surface.id}
-          footprint={surface}
-          material={byBasis ? basisOf(surface) : SURFACE[surface.kind]}
-          castShadow={false}
-        />
+        <SurfaceView key={surface.id} surface={surface} byBasis={byBasis} />
       ))}
-      {world.buildings.map((building, index) => {
-        const graybox = (
-          <Solid
-            key={building.id}
-            footprint={building}
-            material={
-              byBasis
-                ? basisOf(building)
-                : building.kind === 'wall'
-                  ? WALL
-                  : HOUSE_TONES[index % HOUSE_TONES.length]!
-            }
-          />
-        )
-        if (!building.model || byBasis) return graybox
-        return (
-          <ModelView key={building.id} building={building} model={building.model} fallback={graybox} />
-        )
-      })}
+      {world.buildings.map((building, index) => (
+        <BuildingView key={building.id} building={building} index={index} byBasis={byBasis} models={models} />
+      ))}
       {world.props.map((prop) => (
-        <PropView key={prop.id} prop={prop} material={byBasis ? basisOf(prop) : PROP} />
+        <PropView key={prop.id} prop={prop} flat={byBasis ? basisOf(prop) : undefined} />
       ))}
     </group>
   )

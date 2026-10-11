@@ -1,8 +1,9 @@
-import type { Building, Evidence, Prop, PropKind, Rect, Spawn, Surface } from '../types'
+import type { Building, Cardinal, Evidence, Prop, PropKind, Rect, Spawn, Surface, Tone } from '../types'
 
 // THE CASA DO FERNANDEZ (ILOJO BAR, OLAIYA HOUSE) PLOT, TINUBU SQUARE, LAGOS.
 //
-// A graybox reconstruction: plain boxes at evidenced or estimated sizes. The
+// A simplified reconstruction: one authored model and plain shapes, at
+// evidenced or estimated sizes. The
 // research behind every number is in docs/research/milestone-05/, and the ids
 // cited here are the references used there.
 //
@@ -67,13 +68,20 @@ function between(minX: number, maxX: number, minZ: number, maxZ: number) {
   return { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, width: maxX - minX, depth: maxZ - minZ }
 }
 
+/** How a thing looks, where the sources say: a colour by name, and for a lean-to its low side. */
+interface Look {
+  tone?: Tone
+  facing?: Cardinal
+}
+
 export const building = (
   id: string,
   kind: Building['kind'],
   edges: [minX: number, maxX: number, minZ: number, maxZ: number],
   height: number,
   evidence: Evidence,
-): Building => ({ id, kind, ...between(...edges), height, evidence })
+  look: Pick<Look, 'tone'> = {},
+): Building => ({ id, kind, ...between(...edges), height, evidence, ...look })
 
 export const surface = (
   id: string,
@@ -81,7 +89,8 @@ export const surface = (
   edges: [minX: number, maxX: number, minZ: number, maxZ: number],
   height: number,
   evidence: Evidence,
-): Surface => ({ id, kind, ...between(...edges), height, evidence })
+  look: Pick<Look, 'tone'> = {},
+): Surface => ({ id, kind, ...between(...edges), height, evidence, ...look })
 
 export const prop = (
   id: string,
@@ -89,7 +98,8 @@ export const prop = (
   at: [x: number, z: number],
   size: [width: number, depth: number, height: number],
   evidence: Evidence,
-): Prop => ({ id, kind, x: at[0], z: at[1], width: size[0], depth: size[1], height: size[2], evidence })
+  look: Look = {},
+): Prop => ({ id, kind, x: at[0], z: at[1], width: size[0], depth: size[1], height: size[2], evidence, ...look })
 
 // What surrounds the plot. None of it is reconstructed: these are plain masses
 // that say only that something stood there. They are the same on both dates
@@ -119,6 +129,7 @@ export const streets: Surface[] = [
       'C-12',
       'C-13',
     ),
+    { tone: 'asphalt' },
   ),
   surface(
     'bamgbose-street',
@@ -129,5 +140,6 @@ export const streets: Surface[] = [
       'A street with vehicles runs along this side in an undated photograph from August or September 2016. Assumed the same on both days shown. Its width is an estimate.',
       'C-06',
     ),
+    { tone: 'asphalt' },
   ),
 ]

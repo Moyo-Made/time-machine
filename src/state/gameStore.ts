@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { clampVolume, readSettings, VOLUME_STEP, writeSettings, type AudioSettings } from '../audio/settings'
 import { EMPTY_JOURNAL, type Inspection, type Journal } from '../discovery/journal'
 import { INITIAL_ERA, type EraId } from '../era/eras'
 import type { PlayerState } from '../player/movement'
@@ -11,6 +12,23 @@ export interface PerfSample {
   readonly drawCalls: number
   readonly triangles: number
 }
+
+/** A shift that has just succeeded, for the screen and the sound to answer. Presentation only. */
+export interface ShiftMark {
+  /** Counts successful shifts, so a repeat can be told from the one before. */
+  readonly id: number
+  readonly to: EraId
+  /** Whether to show the veil. False when the last one was too recent: see `markShift`. */
+  readonly veil: boolean
+}
+
+/**
+ * The shortest time between two veils. Pressing T quickly still shifts every
+ * time, but the screen is not flashed more than about twice a second.
+ */
+export const VEIL_GAP_MS = 400
+
+const storage = typeof localStorage === 'undefined' ? null : localStorage
 
 // Low-frequency game state only. Anything that changes every frame stays in
 // refs inside the system that owns it.
@@ -35,6 +53,15 @@ interface GameState {
   perfVisible: boolean
   /** Null until the first half second has been measured. */
   perf: PerfSample | null
+  /** The last successful shift, until its presentation is over. Never read by game logic. */
+  shift: ShiftMark | null
+  /** When the last veil was shown, in milliseconds. */
+  lastVeilAt: number
+  /** How many shifts have succeeded. Kept after `shift` is cleared, so ids never repeat. */
+  shiftCount: number
+  /** How many shifts have been refused, so that each one can be answered. */
+  refusals: number
+  audio: AudioSettings
   /** Losing control closes the inspection panel and the journal. */
   setEngaged: (engaged: boolean) => void
   /**
@@ -52,6 +79,13 @@ interface GameState {
   setPlayer: (player: PlayerState) => void
   togglePerf: () => void
   setPerf: (perf: PerfSample) => void
+  /** Call after a shift has been committed. `now` is in milliseconds. */
+  markShift: (to: EraId, now: number) => void
+  /** Ends the presentation of the shift with this id, if it is still the latest. */
+  clearShift: (id: number) => void
+  markRefusal: () => void
+  toggleMute: () => void
+  changeVolume: (steps: number) => void
 }
 
 export const useGameStore = create<GameState>()((set) => ({
@@ -66,6 +100,11 @@ export const useGameStore = create<GameState>()((set) => ({
   journal: EMPTY_JOURNAL,
   perfVisible: true,
   perf: null,
+  shift: null,
+  lastVeilAt: -Infinity,
+  shiftCount: 0,
+  refusals: 0,
+  audio: readSettings(storage),
   setEngaged: (engaged) =>
     set(engaged ? { engaged } : { engaged, focus: null, inspection: null, journalOpen: false }),
   setEra: (era) => set({ era, notice: null, focus: null, inspection: null }),
@@ -78,4 +117,26 @@ export const useGameStore = create<GameState>()((set) => ({
   setPlayer: (player) => set({ player }),
   togglePerf: () => set((state) => ({ perfVisible: !state.perfVisible })),
   setPerf: (perf) => set({ perf }),
+  markShift: (to, now) =>
+    set((state) => {
+      const id = state.shiftCount + 1
+      const veil = now - state.lastVeilAt >= VEIL_GAP_MS
+      return { shift: { id, to, veil }, shiftCount: id, lastVeilAt: veil ? now : state.lastVeilAt }
+    }),
+  clearShift: (id) => set((state) => (state.shift?.id === id ? { shift: null } : {})),
+  markRefusal: () => set((state) => ({ refusals: state.refusals + 1 })),
+  toggleMute: () =>
+    set((state) => {
+      const audio = { ...state.audio, muted: !state.audio.muted }
+      writeSettings(storage, audio)
+      return { audio }
+    }),
+  changeVolume: (steps) =>
+    set((state) => {
+      // Turning the volume up from silence also unmutes: the player asked to hear something.
+      const volume = clampVolume(state.audio.volume + steps * VOLUME_STEP)
+      const audio = { muted: steps > 0 ? false : state.audio.muted, volume }
+      writeSettings(storage, audio)
+      return { audio }
+    }),
 }))

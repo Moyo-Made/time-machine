@@ -19,4 +19,6 @@ export const grayboxStreet: Site = {
   initialEra: '2026',
   connections: streetConnections,
   gridRotation: 0,
+  // South-west and fairly high: lights the fronts on the east side of the street.
+  atmosphere: { sun: { x: -0.5, y: 0.78, z: 0.38 }, haze: [35, 130] },
 }

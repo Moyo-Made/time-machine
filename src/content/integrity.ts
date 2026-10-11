@@ -1,4 +1,4 @@
-import type { Era, Evidence, Footprint, Site } from '../world/types'
+import type { Era, Evidence, Site } from '../world/types'
 import { within, type Source, type SourceId } from './sources'
 
 // The rules that keep sourced content honest, as pure functions over the
@@ -104,8 +104,17 @@ export function checkSite(site: Site, sources: readonly Source[]): Problem[] {
     }
   }
 
-  const checkEvidence = (entity: Footprint, where: string, era: Era, claimed: boolean) => {
-    const evidence: Evidence | undefined = entity.evidence
+  /**
+   * What an entity, or one part of a model, rests on. `claimed` is true for an
+   * entity that is modelled or described. A model's own parts are checked with
+   * `part`: one of them may be a placeholder, and the model test keeps it plain.
+   */
+  const checkEvidence = (
+    evidence: Evidence | undefined,
+    where: string,
+    era: Era,
+    { claimed = false, part = false } = {},
+  ) => {
     if (!documented) {
       if (evidence) add('provenance-mixed', where, 'fictional content cites nothing')
       return
@@ -123,6 +132,9 @@ export function checkSite(site: Site, sources: readonly Source[]): Problem[] {
     if (evidence.sources.length === 0) add('uncited', where, `${evidence.basis} but cites no source`)
     if (evidence.basis === 'estimated' && !evidence.assumption?.trim()) {
       add('no-assumption', where, 'an estimate must say what was assumed')
+    }
+    if (part && evidence.basis === 'evidenced' && !evidence.assumption?.trim()) {
+      add('no-assumption', where, 'an evidenced part of a model must say what was simplified')
     }
     // With nothing found there is already a problem reported above.
     if (evidence.basis === 'evidenced' && era.date && found.length > 0) {
@@ -152,8 +164,27 @@ export function checkSite(site: Site, sources: readonly Source[]): Problem[] {
 
     for (const entity of [...world.surfaces, ...world.buildings, ...world.props]) {
       entityIds.add(entity.id)
-      const modelled = 'model' in entity && entity.model !== undefined
-      checkEvidence(entity, `${at}/${entity.id}`, era, modelled || described.has(entity.id))
+      const model = 'model' in entity ? entity.model : undefined
+      const where = `${at}/${entity.id}`
+      checkEvidence(entity.evidence, where, era, { claimed: model !== undefined || described.has(entity.id) })
+      if (!model) continue
+
+      // A model in a documented site says what each of its parts rests on.
+      if (!documented) {
+        if (model.parts) add('provenance-mixed', where, 'a fictional model has no evidence to divide into parts')
+        continue
+      }
+      if (!model.parts || model.parts.length === 0) {
+        add('no-basis', where, 'its model does not say what each part rests on')
+        continue
+      }
+      for (const name of duplicates(model.parts.map((part) => part.name))) {
+        add('duplicate-id', `${where}/${name}`, 'names two parts of one model')
+      }
+      for (const part of model.parts) {
+        if (part.label.trim() === '') add('empty-text', `${where}/${part.name}`, 'has no label')
+        checkEvidence(part.evidence, `${where}/${part.name}`, era, { part: true })
+      }
     }
 
     for (const poi of world.pointsOfInterest) {
@@ -191,6 +222,10 @@ function citedBy(site: Site): SourceId[] {
   for (const { world } of site.eras) {
     for (const entity of [...world.surfaces, ...world.buildings, ...world.props]) {
       if (entity.evidence) take(entity.evidence)
+    }
+    for (const building of world.buildings) {
+      // Read loosely: a part may be missing its evidence, which checkSite reports.
+      for (const part of building.model?.parts ?? []) take(part.evidence ?? {})
     }
     for (const poi of world.pointsOfInterest) poi.statements.forEach(take)
   }

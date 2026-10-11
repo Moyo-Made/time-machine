@@ -10,8 +10,11 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "measure": "MEASURE=1 playwright test e2e/measure.spec.ts",
     "asset:generate": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/merchant_house.py --",
     "asset:export": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/export_glb.py -- assets/merchant-house/merchant-house.blend src/render/models/merchant-house.glb",
+    "asset:generate:ilojo": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/ilojo_bar.py --",
+    "asset:export:ilojo": "${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender} --background --factory-startup --python assets/blender/export_glb.py -- --parts assets/ilojo-bar/ilojo-bar.blend src/render/models/ilojo-bar.glb",
     "preview": "vite preview"
   },
   "dependencies": {

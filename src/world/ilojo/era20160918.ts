@@ -16,7 +16,7 @@ const HEAPS =
 
 export const ilojo20160918: WorldDefinition = {
   id: 'ilojo-2016-09-18',
-  name: 'Casa do Fernandez plot, 18 September 2016 (graybox reconstruction)',
+  name: 'Casa do Fernandez plot, 18 September 2016 (simplified reconstruction)',
   bounds: BOUNDS,
   spawn: SPAWN,
   surfaces: [
@@ -31,6 +31,7 @@ export const ilojo20160918: WorldDefinition = {
         'W-2016',
         'T-deeds',
       ),
+      { tone: 'brick' },
     ),
     surface(
       'ground-at-the-front',
@@ -41,25 +42,35 @@ export const ilojo20160918: WorldDefinition = {
         'Sandy ground lies in front of the plot in one photograph. Its extent is an estimate.',
         'W-2016',
       ),
+      { tone: 'earth' },
     ),
-    surface('fence-sheets-on-the-ground', 'sheet', [-1, 8.5, 0.6, 3], 0.08, estimated(FENCE, 'W-2016')),
+    surface('fence-sheets-on-the-ground', 'sheet', [-1, 8.5, 0.6, 3], 0.08, estimated(FENCE, 'W-2016'), {
+      tone: 'sheet',
+    }),
   ],
   buildings: [
     ...surroundings,
     building(
       'back-wall-remains',
-      'wall',
+      'ruin',
       [WEST, EAST, PLOT_BACK - 0.5, PLOT_BACK],
       2.4,
       estimated(
         'The broken ends of low walls stand along the back of the plot in the photographs. Their position, length and height are estimates.',
         'W-2016',
       ),
+      { tone: 'render' },
     ),
   ],
   props: [
-    prop('fence-bamgbose-side', 'fence', [WEST - 0.1, PLOT_BACK / 2], [0.2, -PLOT_BACK, 3.2], estimated(FENCE, 'W-2016')),
-    prop('fence-front', 'fence', [(WEST - 1) / 2, 0.1], [-1 - WEST, 0.2, 3.2], estimated(FENCE, 'W-2016')),
+    prop('fence-bamgbose-side', 'fence', [WEST - 0.1, PLOT_BACK / 2], [0.2, -PLOT_BACK, 3.2], estimated(FENCE, 'W-2016'), {
+      tone: 'sheet',
+      facing: 'west',
+    }),
+    prop('fence-front', 'fence', [(WEST - 1) / 2, 0.1], [-1 - WEST, 0.2, 3.2], estimated(FENCE, 'W-2016'), {
+      tone: 'sheet',
+      facing: 'south',
+    }),
     prop(
       'state-signboard',
       'signboard',
@@ -69,10 +80,11 @@ export const ilojo20160918: WorldDefinition = {
         'A green signboard on two posts stands in the rubble in one photograph. Its position and size are estimates. Its lettering is not reproduced.',
         'W-2016',
       ),
+      { tone: 'green' },
     ),
-    prop('heap-1', 'heap', [-4.5, -6.5], [4, 3, 1.6], estimated(HEAPS, 'W-2016')),
-    prop('heap-2', 'heap', [5.2, -11.5], [3.5, 3, 1.2], estimated(HEAPS, 'W-2016')),
-    prop('heap-3', 'heap', [-2.5, -15.5], [3, 2.5, 1], estimated(HEAPS, 'W-2016')),
+    prop('heap-1', 'heap', [-4.5, -6.5], [4, 3, 1.6], estimated(HEAPS, 'W-2016'), { tone: 'earth' }),
+    prop('heap-2', 'heap', [5.2, -11.5], [3.5, 3, 1.2], estimated(HEAPS, 'W-2016'), { tone: 'earth' }),
+    prop('heap-3', 'heap', [-2.5, -15.5], [3, 2.5, 1], estimated(HEAPS, 'W-2016'), { tone: 'earth' }),
   ],
   pointsOfInterest: pointsOfInterest20160918,
 }

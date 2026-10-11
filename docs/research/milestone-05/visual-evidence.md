@@ -93,6 +93,8 @@ Six photographs carry a camera date or a stated one: **C-10, C-11** (17 July), *
 | C-01 | Right of centre, so the right bays look larger than they are | about 263 | about 232 | 1.13 |
 | C-12 | Left of centre, so the left bays look larger than they are | about 260 | about 193 | 1.34 |
 
+**The openings themselves differ as well.** The three on the right are wider and taller than the three on the left, in both photographs, including the one where perspective should favour the left. See `docs/milestone-07/art-direction.md`.
+
 Widths are in pixels on an enlarged copy. The true ratio lies between the two, which agrees with the 1.27 measured on the square-on print and the 1.28 from the deed sketch.
 
 ## 4. Where the building stood: the maps

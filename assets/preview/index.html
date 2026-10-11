@@ -39,6 +39,11 @@
         sun=front | game                             front-lit, or lit as the game lights an east-side lot
         context=1                                    adds grey neighbours and a 1.7 m figure
         info=0                                       hides the text panel
+        model=/src/render/models/<name>.glb          which model (default: the merchant house)
+        fit=1                                        scales the views to the model's size
+        figure=1                                     adds only the 1.7 m figure, in front of the model
+        basis=part:kind,part:kind                    colours each named part by what it rests on:
+                                                     evidenced, estimated or placeholder
       Drag to orbit, scroll to zoom.
     -->
     <script type="module">
@@ -115,25 +120,64 @@
       const info = document.getElementById('info')
       if (params.get('info') === '0') info.remove()
 
+      // The colours the game's evidence view uses. See src/render/WorldView.tsx.
+      const BASIS = { evidenced: '#2f7d4f', estimated: '#e2a93b', placeholder: '#c9cdd4' }
+      const basisOf = Object.fromEntries(
+        (params.get('basis') ?? '')
+          .split(',')
+          .filter(Boolean)
+          .map((pair) => pair.split(':')),
+      )
       const url = params.get('model') ?? '/src/render/models/merchant-house.glb'
       new GLTFLoader().load(
         url,
         (gltf) => {
           let triangles = 0
           let meshes = 0
+          const perPart = new Map()
+          // A part is a named node. One with several materials loads as a group of meshes.
+          const partOf = (mesh) => (mesh.parent === gltf.scene ? mesh.name : mesh.parent.name)
           gltf.scene.traverse((object) => {
             if (!object.isMesh) return
             object.castShadow = object.receiveShadow = true
             meshes += 1
             const geometry = object.geometry
-            triangles += (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3
+            const count = (geometry.index ? geometry.index.count : geometry.attributes.position.count) / 3
+            triangles += count
+            const part = partOf(object)
+            perPart.set(part, (perPart.get(part) ?? 0) + count)
+            const kind = basisOf[part]
+            if (kind) object.material = matte(BASIS[kind] ?? '#b0408a')
           })
           scene.add(gltf.scene)
           const size = new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3())
+
+          if (params.get('fit') === '1') {
+            // Views are written for a 9 m front. Scale them, the target and the shadows to this model.
+            const scale = size.x / 9
+            camera.position.multiplyScalar(scale * 0.62)
+            controls.target.set(0, params.get('view') === 'street' ? size.y * 0.55 : size.y * 0.45, -size.z / 2)
+            if (params.get('view') === 'street') camera.position.set(-size.x * 0.3, 1.7, size.x * 0.62)
+            controls.update()
+            const reach = 16 * scale
+            Object.assign(sun.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach, far: 90 * scale })
+            sun.position.copy(sunDirection).multiplyScalar(40 * scale)
+            sun.shadow.camera.updateProjectionMatrix()
+            ground.scale.setScalar(scale * 2)
+          }
+          if (params.get('figure') === '1') {
+            const figure = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.26, 4, 12), matte('#c2813c'))
+            figure.position.set(size.x * 0.12, 0.85, 2.2)
+            figure.castShadow = true
+            scene.add(figure)
+          }
+
+          const parts = [...perPart].map(([name, count]) => `  ${name}: ${count.toLocaleString('en')}${basisOf[name] ? ` (${basisOf[name]})` : ''}`)
           info.textContent =
             `${url.split('/').pop()}\n` +
             `${size.x.toFixed(2)} m wide · ${size.y.toFixed(2)} m tall · ${size.z.toFixed(2)} m deep\n` +
-            `${triangles.toLocaleString('en')} triangles · ${meshes} draw calls`
+            `${triangles.toLocaleString('en')} triangles · ${meshes} draw calls` +
+            (perPart.size > 1 ? `\n${parts.join('\n')}` : '')
           document.body.dataset.ready = 'true'
         },
         undefined,

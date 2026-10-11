@@ -1,5 +1,6 @@
 import type { RefObject } from 'react'
 import { Box3, type Mesh, type Object3D } from 'three'
+import { NO_AUDIO, type AudioProbe } from './audio/engine'
 import { SURROUNDINGS } from './era/eras'
 import { isBlocked } from './player/collision'
 import type { PlayerHandle } from './player/PlayerController'
@@ -16,6 +17,13 @@ interface DebugHandle {
   violations: number
   /** Authored models currently in the scene, by the id of the entity they show. */
   models: Record<string, MountedModel>
+  /**
+   * For each named part of every mounted model that is drawn in the evidence
+   * view, the colours on it. Empty in the ordinary view.
+   */
+  modelColours: () => Record<string, string[]>
+  /** The sound engine: whether it exists yet, whether it is running, and at what level. */
+  audio: () => AudioProbe
   /** Point-of-interest markers currently in the scene, by point-of-interest id. */
   markers: Record<string, MarkerState>
 }
@@ -41,7 +49,15 @@ declare global {
 }
 
 export function installDebugHandle() {
-  window.__TM__ = { store: useGameStore, player: null, violations: 0, models: {}, markers: {} }
+  window.__TM__ = {
+    store: useGameStore,
+    player: null,
+    violations: 0,
+    models: {},
+    markers: {},
+    modelColours: () => Object.assign({}, ...evidenceColours.values()),
+    audio: () => audioProbe?.() ?? NO_AUDIO,
+  }
 }
 
 /**
@@ -63,6 +79,21 @@ export function watchPlayer(player: RefObject<PlayerHandle | null>, radius: numb
   }
   frame = requestAnimationFrame(check)
   return () => cancelAnimationFrame(frame)
+}
+
+let audioProbe: (() => AudioProbe) | null = null
+
+/** Lets the debug handle read the sound engine; null when the game's sound is torn down. */
+export function reportAudio(probe: (() => AudioProbe) | null) {
+  audioProbe = probe
+}
+
+const evidenceColours = new Map<string, Record<string, string[]>>()
+
+/** Records the evidence-view colours on a mounted model's parts; null when it is not in that view. */
+export function reportModelColours(entityId: string, colours: Record<string, string[]> | null) {
+  if (colours) evidenceColours.set(entityId, colours)
+  else evidenceColours.delete(entityId)
 }
 
 /** Records a model while it is in the scene. Returns the function that removes the record. */

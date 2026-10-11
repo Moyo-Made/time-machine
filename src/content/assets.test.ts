@@ -20,8 +20,24 @@ function pictures(folder: string): string[] {
     .sort()
 }
 
+const SOUND = /\.(mp3|ogg|oga|wav|m4a|aac|flac|opus|webm|mid|midi)$/i
+
+function sounds(folder: string): string[] {
+  return readdirSync(join(ROOT, folder), { withFileTypes: true, recursive: true })
+    .filter((entry) => entry.isFile() && SOUND.test(entry.name))
+    .map((entry) => relative(ROOT, join(entry.parentPath, entry.name)).replaceAll('\\', '/'))
+}
+
 describe('what the build can display', () => {
   it('ships no picture other than the ones listed', () => {
     expect([...pictures('src'), ...pictures('public')].sort()).toEqual(ALLOWED)
+  })
+})
+
+describe('what the build can play', () => {
+  // Every sound is made in code (src/audio/engine.ts). A recording would need
+  // a source, a licence and a reason to believe it is of the place.
+  it('ships no audio file at all', () => {
+    expect([...sounds('src'), ...sounds('public')]).toEqual([])
   })
 })

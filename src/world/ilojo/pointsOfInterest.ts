@@ -77,7 +77,7 @@ export const pointsOfInterest20160801: PointOfInterest[] = [
   },
   {
     id: 'figure',
-    title: 'The figure on the parapet (not modelled)',
+    title: 'The figure on the parapet (shown as a plain block)',
     provenance: 'documented',
     entityId: 'ilojo-bar',
     target: { minX: JOIN - 1, maxX: JOIN + 1, minY: 9, maxY: 11.5, minZ: -1.2, maxZ: 0 },

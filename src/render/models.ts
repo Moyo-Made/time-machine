@@ -1,11 +1,13 @@
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import type { ModelAsset } from '../world/types'
+import ilojoBar from './models/ilojo-bar.glb?url'
 import merchantHouse from './models/merchant-house.glb?url'
 
 // Each asset is exported from Blender to src/render/models/<asset>.glb.
 // See assets/README.md.
 const MODEL_URLS: Record<ModelAsset, string> = {
   'merchant-house': merchantHouse,
+  'ilojo-bar': ilojoBar,
 }
 
 const loading = new Map<ModelAsset, Promise<GLTF>>()

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { claimsOf } from '../../content/evidence'
 import { checkSite } from '../../content/integrity'
 import { SOURCES } from '../../content/sources'
 import { nextEra } from '../../era/eras'
@@ -86,10 +87,45 @@ describe('what each thing rests on', () => {
   })
 
   it.each(worlds)('claims nothing as evidenced that is only a box on %s', (_, world) => {
-    // In a graybox every size is an estimate. "Evidenced" is for a model built
-    // from the photographs, which does not exist yet.
+    // A box has no features to see, only a size, and every size here is an
+    // estimate. "Evidenced" is for parts of a model built from the photographs.
     const bases = new Set(entities(world).map((entity) => entity.evidence!.basis))
     expect([...bases].sort()).toEqual(['estimated', 'placeholder'])
+  })
+
+  it('counts the building by the parts of its model on the first day', () => {
+    const claims = claimsOf(before)
+    expect(claims.some((claim) => claim.id === 'ilojo-bar')).toBe(false)
+    const parts = claims.filter((claim) => claim.id.startsWith('ilojo-bar/'))
+    expect(parts.map((part) => [part.id.split('/')[1], part.evidence!.basis])).toEqual([
+      ['upper-floor', 'evidenced'],
+      ['parapet', 'evidenced'],
+      ['ground-floor', 'estimated'],
+      ['bamgbose-side', 'estimated'],
+      ['figure-marker', 'estimated'],
+      ['cap-and-rear', 'placeholder'],
+    ])
+    for (const part of parts) expect(part.label, part.id).toBeTruthy()
+  })
+
+  it('counts every other thing once, and has no model on the second day', () => {
+    expect(claimsOf(before)).toHaveLength(entities(before).length - 1 + 6)
+    expect(claimsOf(after)).toHaveLength(entities(after).length)
+    expect(after.buildings.some((building) => building.model)).toBe(false)
+  })
+
+  it('rests each evidenced part on photographs of that very day, and says what was simplified', () => {
+    for (const claim of claimsOf(before)) {
+      if (claim.evidence!.basis !== 'evidenced') continue
+      expect(claim.evidence!.sources, claim.id).toEqual(['C-12', 'C-13'])
+      expect(claim.evidence!.assumption, claim.id).toMatch(/reduced to|estimate/)
+    }
+  })
+
+  it('gives the figure no shape: its marker is an estimate and says it is not a figure', () => {
+    const marker = claimsOf(before).find((claim) => claim.id === 'ilojo-bar/figure-marker')!
+    expect(marker.evidence!.basis).toBe('estimated')
+    expect(marker.evidence!.assumption).toContain('a plain block and not a figure')
   })
 
   it.each(worlds)('states every assumption as a full sentence on %s', (_, world) => {
@@ -116,8 +152,16 @@ describe('what each thing rests on', () => {
   it('names no person and gives no cause in any assumption', () => {
     const banned = /\b(because|due to|owing to|in order to|illegal|unlawful|ordered|blame|fault|culprit|developer|family|governor|minister)\b/i
     for (const [, world] of worlds) {
+      for (const claim of claimsOf(world)) {
+        expect(claim.evidence!.assumption ?? '', claim.id).not.toMatch(banned)
+      }
+    }
+  })
+
+  it('uses only colours the sources support, and none on what is not reconstructed', () => {
+    for (const [, world] of worlds) {
       for (const entity of entities(world)) {
-        expect(entity.evidence!.assumption ?? '', entity.id).not.toMatch(banned)
+        if (entity.evidence!.basis === 'placeholder') expect(entity.tone, entity.id).toBeUndefined()
       }
     }
   })

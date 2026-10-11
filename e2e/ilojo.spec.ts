@@ -31,8 +31,8 @@ test('G goes to the reconstructed plot and back, arriving at each site’s start
 
   await expect(era(page)).toHaveText('1 August 2016')
   await expect(site(page)).toContainText('Casa do Fernandez · Ilojo Bar · Olaiya House')
-  await expect(site(page)).toContainText('graybox reconstruction')
-  await expect(page.getByRole('status')).toContainText('A real plot, rebuilt in plain boxes')
+  await expect(site(page)).toContainText('simplified reconstruction')
+  await expect(page.getByRole('status')).toContainText('A real plot, rebuilt in simplified form')
   expect(await readGame(page)).toEqual({ era: 'ilojo-2016-08-01', x: 0.5, z: 18, yaw: 0, pitch: 0 })
   await page.waitForTimeout(600)
   await page.screenshot({ path: testInfo.outputPath('plot-1-august.png') })
@@ -93,16 +93,30 @@ test('V shows what each thing rests on, in the plot only', async ({ page }, test
 
   await page.keyboard.press('KeyV')
   await expect(legend(page)).toBeVisible()
-  await expect(page.getByTestId('evidence-evidenced')).toContainText('Evidenced (0)')
-  await expect(page.getByTestId('evidence-estimated')).toContainText(/Estimated \(1\d\)/)
-  await expect(page.getByTestId('evidence-placeholder')).toContainText('Placeholder (6)')
+  // The building is counted by the parts of its model: two seen that day,
+  // three estimated, and one plain mass standing for what is not reconstructed.
+  await expect(page.getByTestId('evidence-evidenced')).toContainText('Evidenced (2)')
+  await expect(page.getByTestId('evidence-estimated')).toContainText('Estimated (19)')
+  await expect(page.getByTestId('evidence-placeholder')).toContainText('Placeholder (7)')
+  await expect(page.getByTestId('evidence-parts').locator('li')).toHaveText([
+    'Upper floor of the front',
+    'Parapet of the front',
+    'Ground floor of the front',
+    'Bamgbose Street side',
+    'Marker for the figure on the parapet',
+    'Roof and rear (not reconstructed)',
+  ])
+  await expect(page.getByTestId('evidence-parts').locator('.hud-swatch-evidenced')).toHaveCount(2)
+  await expect(page.getByTestId('evidence-parts').locator('.hud-swatch-placeholder')).toHaveCount(1)
   await page.waitForTimeout(600)
   await page.screenshot({ path: testInfo.outputPath('evidence-1-august.png') })
 
   // The view carries over the shift, and the counts are the new day's.
   await page.keyboard.press('KeyT')
   await expect(era(page)).toHaveText('18 September 2016')
+  await expect(page.getByTestId('evidence-evidenced')).toContainText('Evidenced (0)')
   await expect(page.getByTestId('evidence-placeholder')).toContainText('Placeholder (5)')
+  await expect(page.getByTestId('evidence-parts')).toHaveCount(0)
   await page.waitForTimeout(600)
   await page.screenshot({ path: testInfo.outputPath('evidence-18-september.png') })
 
@@ -137,7 +151,7 @@ test('the start card describes the site the player is in', async ({ page }) => {
     document.exitPointerLock()
     window.__TM__!.store.getState().setEngaged(false)
   })
-  await expect(page.getByTestId('site-note')).toContainText('A graybox reconstruction of a real plot, from cited sources')
+  await expect(page.getByTestId('site-note')).toContainText('A simplified reconstruction of a real plot, from cited sources')
   await expect(page.getByTestId('site-note')).not.toContainText('fictional')
 })
 
@@ -251,4 +265,55 @@ test('no picture is ever requested at the plot', async ({ page }) => {
   await page.keyboard.press('KeyT')
   await page.waitForTimeout(500)
   expect(pictures).toEqual([])
+})
+
+const mountedModels = (page: Page) => page.evaluate(() => Object.keys(window.__TM__!.models))
+const partColours = (page: Page) =>
+  page.evaluate(() => {
+    // The evidence view replaces each mesh's material. Report the colours in use on the model.
+    const debug = window.__TM__ as unknown as { modelColours?: () => Record<string, string[]> }
+    return debug.modelColours?.() ?? {}
+  })
+
+test('the building\u2019s model stands on 1 August only', async ({ page }) => {
+  await goToThePlot(page)
+  await expect.poll(() => mountedModels(page)).toEqual(['ilojo-bar'])
+  const model = await page.evaluate(() => window.__TM__!.models['ilojo-bar']!)
+  expect(model.asset).toBe('ilojo-bar')
+  expect(model.triangles).toBeGreaterThan(5000)
+  // Placed on its plot: front on the front line, standing on the ground.
+  expect(model.min[1]).toBeCloseTo(0, 2)
+  expect(model.max[2]).toBeGreaterThan(0)
+  expect(model.max[2]).toBeLessThan(1)
+
+  await page.keyboard.press('KeyT')
+  await expect(era(page)).toHaveText('18 September 2016')
+  await expect.poll(() => mountedModels(page)).toEqual([])
+
+  // And never on the street.
+  await page.keyboard.press('KeyG')
+  await expect(era(page)).toHaveText('2026')
+  await expect.poll(() => mountedModels(page)).toEqual([])
+})
+
+test('the evidence view colours the model part by part', async ({ page }) => {
+  await goToThePlot(page)
+  await expect.poll(() => mountedModels(page)).toEqual(['ilojo-bar'])
+  expect(Object.keys(await partColours(page))).toEqual([])
+
+  await page.keyboard.press('KeyV')
+  await expect(legend(page)).toBeVisible()
+  await expect
+    .poll(() => partColours(page))
+    .toEqual({
+      'upper-floor': ['#2f7d4f'],
+      parapet: ['#2f7d4f'],
+      'ground-floor': ['#e2a93b'],
+      'bamgbose-side': ['#e2a93b'],
+      'figure-marker': ['#e2a93b'],
+      'cap-and-rear': ['#c9cdd4'],
+    })
+
+  await page.keyboard.press('KeyV')
+  await expect.poll(async () => Object.keys(await partColours(page))).toEqual([])
 })

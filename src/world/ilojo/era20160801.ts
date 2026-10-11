@@ -16,6 +16,7 @@ import {
   surroundings,
   WEST,
 } from './layout'
+import { ilojoBarModel } from './model'
 import { pointsOfInterest20160801 } from './pointsOfInterest'
 
 // The plot on 1 August 2016, six weeks before the building was demolished.
@@ -26,13 +27,15 @@ import { pointsOfInterest20160801 } from './pointsOfInterest'
 // banner on the parapet, which first appears in September.
 
 const UMBRELLAS =
-  'Market umbrellas stand in a row in front of the building in both photographs of 1 August 2016. Their number, size and positions here are illustrative.'
+  'Market umbrellas stand in a row in front of the building in both photographs of 1 August 2016. Their number, size and positions here, and the order of their colours, are illustrative.'
+/** Colours of umbrellas seen in the photographs. Which stood where is not recorded. */
+const UMBRELLA_TONES = ['purple', 'yellow', 'red', 'blue', 'green', 'red'] as const
 const MINIBUSES =
   'Yellow minibuses stand on the road in front in both photographs of 1 August 2016. Their number and positions here are illustrative.'
 
 export const ilojo20160801: WorldDefinition = {
   id: 'ilojo-2016-08-01',
-  name: 'Casa do Fernandez plot, 1 August 2016 (graybox reconstruction)',
+  name: 'Casa do Fernandez plot, 1 August 2016 (simplified reconstruction)',
   bounds: BOUNDS,
   spawn: SPAWN,
   surfaces: [
@@ -47,23 +50,29 @@ export const ilojo20160801: WorldDefinition = {
         'C-10',
         'C-11',
       ),
+      { tone: 'earth' },
     ),
   ],
   buildings: [
     ...surroundings,
-    building(
-      'ilojo-bar',
-      'house',
-      [WEST, EAST, BLOCK_BACK, 0],
-      FRONT_HEIGHT,
-      estimated(
-        'A two-storey building of six bays stands here in both photographs of 1 August 2016. Its width, 18.6 m, is read from a 1914 deed sketch reproduced small in a 2021 thesis. Its height, about 10 m, and its depth, about 7.5 m, are estimated from photographs.',
-        'C-12',
-        'C-13',
-        'C-05',
-        'T-deeds',
+    {
+      ...building(
+        'ilojo-bar',
+        'house',
+        [WEST, EAST, BLOCK_BACK, 0],
+        FRONT_HEIGHT,
+        estimated(
+          'A two-storey building of six bays stands here in both photographs of 1 August 2016. Its width, 18.6 m, is read from a 1914 deed sketch reproduced small in a 2021 thesis. Its height, about 10 m, and its depth, about 7.5 m, are estimated from photographs.',
+          'C-12',
+          'C-13',
+          'C-05',
+          'T-deeds',
+        ),
+        { tone: 'render' },
       ),
-    ),
+      // Purely visual. The box above is what the player collides with.
+      model: ilojoBarModel,
+    },
     building(
       'rear-brick-range',
       'house',
@@ -75,6 +84,7 @@ export const ilojo20160801: WorldDefinition = {
         'C-06',
         'T-deeds',
       ),
+      { tone: 'brick' },
     ),
     // The 1914 sketch shows this part of the plot built on. Nothing found shows what stood here in 2016.
     building('rear-not-reconstructed', 'house', [JOIN, EAST, PLOT_BACK, BLOCK_BACK], 6, placeholder('T-deeds')),
@@ -90,6 +100,7 @@ export const ilojo20160801: WorldDefinition = {
         'C-05',
         'C-06',
       ),
+      { tone: 'rust', facing: 'west' },
     ),
     prop(
       'lean-tos-at-the-front',
@@ -101,6 +112,7 @@ export const ilojo20160801: WorldDefinition = {
         'C-10',
         'C-11',
       ),
+      { tone: 'rust', facing: 'south' },
     ),
     prop(
       'pole-at-the-corner',
@@ -111,6 +123,7 @@ export const ilojo20160801: WorldDefinition = {
         'A utility pole stands in front of the Bamgbose Street end of the building in a photograph of 1 August 2016. Its position and height are estimates.',
         'C-12',
       ),
+      { tone: 'timber' },
     ),
     prop(
       'local-government-sign',
@@ -122,12 +135,20 @@ export const ilojo20160801: WorldDefinition = {
         'C-12',
         'C-13',
       ),
+      { tone: 'yellow' },
     ),
-    ...[-7.5, -4.5, -1.5, 1.5, 4.5, 7.5].map((x, index) =>
-      prop(`umbrella-${index + 1}`, 'umbrella', [x, 5.3], [1.6, 1.6, 2.4], estimated(UMBRELLAS, 'C-12', 'C-13')),
+    ...UMBRELLA_TONES.map((tone, index) =>
+      prop(
+        `umbrella-${index + 1}`,
+        'umbrella',
+        [-7.5 + 3 * index, 5.3],
+        [1.6, 1.6, 2.4],
+        estimated(UMBRELLAS, 'C-12', 'C-13'),
+        { tone },
+      ),
     ),
-    prop('minibus-1', 'minibus', [-6.4, 9.6], [4.8, 1.9, 2], estimated(MINIBUSES, 'C-12', 'C-13')),
-    prop('minibus-2', 'minibus', [7.2, 10.4], [4.8, 1.9, 2], estimated(MINIBUSES, 'C-12', 'C-13')),
+    prop('minibus-1', 'minibus', [-6.4, 9.6], [4.8, 1.9, 2], estimated(MINIBUSES, 'C-12', 'C-13'), { tone: 'yellow' }),
+    prop('minibus-2', 'minibus', [7.2, 10.4], [4.8, 1.9, 2], estimated(MINIBUSES, 'C-12', 'C-13'), { tone: 'yellow' }),
   ],
   pointsOfInterest: pointsOfInterest20160801,
 }

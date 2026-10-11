@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
+import { useAudio } from './audio/useAudio'
 import { watchPlayer } from './debug'
 import { FocusProbe } from './discovery/FocusProbe'
 import { useDiscoveryKeys } from './discovery/useDiscoveryKeys'
@@ -33,6 +34,7 @@ function App() {
   const player = useRef<PlayerHandle>(null)
   useShiftKey(player, config.radius)
   useSiteKey(player)
+  useAudio()
   useDiscoveryKeys(player, config.eyeHeight)
 
   useEffect(() => {

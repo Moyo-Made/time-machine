@@ -61,3 +61,27 @@ describe('provenance labels', () => {
     expect(PROVENANCE_LABEL.fictional).not.toMatch(/source|reconstruct/i)
   })
 })
+
+describe('authored models', () => {
+  const uses = SITES.flatMap((site) =>
+    site.eras.flatMap((era) =>
+      era.world.buildings.flatMap((building) =>
+        building.model ? [{ site: site.id, era: era.id, entity: building.id, model: building.model }] : [],
+      ),
+    ),
+  )
+
+  it('are each used by one site, on one day', () => {
+    expect(uses.map(({ site, era, entity, model }) => [model.asset, site, era, entity])).toEqual([
+      ['merchant-house', 'graybox-street', '1960', 'east-2'],
+      ['ilojo-bar', 'ilojo-bar', 'ilojo-2016-08-01', 'ilojo-bar'],
+    ])
+  })
+
+  it('are divided into evidence parts at the documented site only', () => {
+    for (const { site, model } of uses) {
+      const documented = SITES.find((candidate) => candidate.id === site)!.provenance === 'documented'
+      expect(model.parts !== undefined, model.asset).toBe(documented)
+    }
+  })
+})

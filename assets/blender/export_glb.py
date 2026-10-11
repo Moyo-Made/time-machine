@@ -13,6 +13,10 @@ What gets exported:
     disabled for rendering.
   - With modifiers applied, and joined into one mesh with one part per
     material, so the game draws the building in a handful of calls.
+  - With --parts: one mesh for each top-level collection called
+    "Part.<name>", named <name>. The game uses the names to say what each
+    part of a reconstruction rests on. Objects outside those collections are
+    an error, so nothing is exported without a part.
 
 Conventions the .blend must follow (see its "README" text block): metres, Z up,
 front facing -Y, origin on the ground at the centre of the front edge. The
@@ -30,6 +34,7 @@ from mathutils import Vector
 
 TINT = "Tint"
 SKIPPED_COLLECTION = "Guides"
+PART_PREFIX = "Part."
 
 # glTF exporter settings. Any name this Blender version does not know is
 # dropped and reported, so the script survives exporter changes.
@@ -67,7 +72,7 @@ def exportable_objects(scene):
     ]
 
 
-def join_by_material(objects, name):
+def join_by_material(objects, name, tinted=True):
     """One mesh holding every object, modifiers applied, in world space."""
     depsgraph = bpy.context.evaluated_depsgraph_get()
     materials = []
@@ -80,7 +85,7 @@ def join_by_material(objects, name):
             mesh.flip_normals()  # a mirrored object would otherwise export inside out
 
         # Objects added by hand may have no tint; give them a neutral one.
-        if TINT not in mesh.color_attributes:
+        if tinted and TINT not in mesh.color_attributes:
             attribute = mesh.color_attributes.new(TINT, "FLOAT_COLOR", "CORNER")
             for item in attribute.data:
                 item.color = (1.0, 1.0, 1.0, 1.0)
@@ -100,9 +105,27 @@ def join_by_material(objects, name):
     joined.free()
     for material in materials:
         result.materials.append(material)
-    result.color_attributes.active_color = result.color_attributes[TINT]
-    result.color_attributes.render_color_index = result.color_attributes.find(TINT)
+    if tinted:
+        result.color_attributes.active_color = result.color_attributes[TINT]
+        result.color_attributes.render_color_index = result.color_attributes.find(TINT)
     return result, materials
+
+
+def parts_of(scene, objects):
+    """{part name: its objects}, in the file's order. Every object must be in a part."""
+    parts = {}
+    placed = set()
+    for collection in scene.collection.children:
+        if not collection.name.startswith(PART_PREFIX):
+            continue
+        members = [obj for obj in collection.all_objects if obj in objects]
+        if members:
+            parts[collection.name[len(PART_PREFIX) :]] = members
+            placed.update(members)
+    stray = [obj.name for obj in objects if obj not in placed]
+    if stray:
+        sys.exit(f"Not in any '{PART_PREFIX}<name>' collection, so they have no part: {', '.join(stray)}")
+    return parts
 
 
 def describe(scene, objects):
@@ -119,8 +142,10 @@ def describe(scene, objects):
 
 def main():
     arguments = sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else []
+    by_part = "--parts" in arguments
+    arguments = [argument for argument in arguments if argument != "--parts"]
     if len(arguments) != 2:
-        sys.exit("Usage: blender --background --python export_glb.py -- <source.blend> <target.glb>")
+        sys.exit("Usage: blender --background --python export_glb.py -- [--parts] <source.blend> <target.glb>")
     source, target = (os.path.abspath(path) for path in arguments)
 
     bpy.ops.wm.open_mainfile(filepath=source)
@@ -131,31 +156,56 @@ def main():
     describe(scene, objects)
 
     name = os.path.splitext(os.path.basename(target))[0]
-    mesh, materials = join_by_material(objects, name)
-    export = bpy.data.objects.new(name, mesh)
-    scene.collection.objects.link(export)
+    # A file with no tint anywhere is exported without the colour attribute.
+    tinted = any(TINT in obj.data.color_attributes for obj in objects)
+    groups = parts_of(scene, objects) if by_part else {name: objects}
+
     for obj in scene.objects:
         obj.select_set(False)
-    export.select_set(True)
-    bpy.context.view_layer.objects.active = export
+    exported = {}
+    for group, members in groups.items():
+        mesh, materials = join_by_material(members, group, tinted)
+        export = bpy.data.objects.new(group, mesh)
+        scene.collection.objects.link(export)
+        export.select_set(True)
+        bpy.context.view_layer.objects.active = export
+        exported[group] = (mesh, materials)
 
     known = bpy.ops.export_scene.gltf.get_rna_type().properties.keys()
-    options = {key: value for key, value in EXPORT_OPTIONS.items() if key in known}
-    dropped = sorted(set(EXPORT_OPTIONS) - set(options))
+    settings = dict(EXPORT_OPTIONS, export_vertex_color="ACTIVE" if tinted else "NONE")
+    options = {key: value for key, value in settings.items() if key in known}
+    dropped = sorted(set(settings) - set(options))
     if dropped:
         print(f"Exporter options not known to Blender {bpy.app.version_string}: {', '.join(dropped)}")
 
     os.makedirs(os.path.dirname(target), exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=target, **options)
 
-    mesh.calc_loop_triangles()
-    lo = Vector(map(min, *(vert.co for vert in mesh.vertices)))
-    hi = Vector(map(max, *(vert.co for vert in mesh.vertices)))
+    lo = Vector((math.inf,) * 3)
+    hi = Vector((-math.inf,) * 3)
+    triangles = 0
+    used = []
+    per_part = {}
+    for group, (mesh, materials) in exported.items():
+        mesh.calc_loop_triangles()
+        triangles += len(mesh.loop_triangles)
+        per_part[group] = {
+            "triangles": len(mesh.loop_triangles),
+            "materials": [material.name if material else None for material in materials],
+        }
+        for material in materials:
+            label = material.name if material else None
+            if label not in used:
+                used.append(label)
+        for vert in mesh.vertices:
+            lo = Vector(map(min, lo, vert.co))
+            hi = Vector(map(max, hi, vert.co))
+
     stats = {
         "blender": bpy.app.version_string,
         "objects": len(objects),
-        "materials": [material.name if material else None for material in materials],
-        "triangles": len(mesh.loop_triangles),
+        "materials": used,
+        "triangles": triangles,
         "width_x": round(hi.x - lo.x, 3),
         "depth_y": round(hi.y - lo.y, 3),
         "height_z": round(hi.z - lo.z, 3),
@@ -163,11 +213,13 @@ def main():
         "front_y": round(lo.y, 3),
         "bytes": os.path.getsize(target),
     }
+    if by_part:
+        stats["parts"] = per_part
     if not math.isclose(lo.z, 0.0, abs_tol=0.005):
         print(f"WARNING: the lowest point is at z = {lo.z:.3f} m, not on the ground.")
     print(f"\nExported {target}")
     print("STATS " + json.dumps(stats))
-    # The .blend is deliberately not saved: the joined copy lives only in memory.
+    # The .blend is deliberately not saved: the joined copies live only in memory.
 
 
 if __name__ == "__main__":

@@ -135,3 +135,106 @@ test('a key held when the mouse is released does not carry on afterwards', async
 
   await page.keyboard.up('KeyW')
 })
+
+// How a shift is shown. None of this changes what a shift does: the tests
+// above run unaltered.
+
+const veil = (page: Page) => page.getByTestId('shift-veil')
+const shiftLabel = (page: Page) => page.getByTestId('shift-label')
+const shiftCounts = (page: Page) =>
+  page.evaluate(() => {
+    const { shiftCount, refusals } = window.__TM__!.store.getState()
+    return { shiftCount, refusals }
+  })
+
+test('a shift that happens is veiled for a moment and names the era it went to', async ({ page }, testInfo) => {
+  await wanderOff(page)
+  const before = await readGame(page)
+
+  await shift(page)
+  // The shift is already done by the time anything is shown.
+  expect(await readGame(page)).toEqual({ ...before, era: '1960' })
+  await expect(veil(page)).toHaveCount(1)
+  await expect(shiftLabel(page)).toHaveText('1960')
+  // The veil is over the scene and under the rest of the HUD, and takes no input.
+  expect(await veil(page).evaluate((element) => getComputedStyle(element).pointerEvents)).toBe('none')
+
+  // It fades by itself and is removed, leaving the game as it would be without it.
+  await expect(veil(page)).toHaveCount(0, { timeout: 3000 })
+  await expect(shiftLabel(page)).toHaveCount(0)
+  expect(await readGame(page)).toEqual({ ...before, era: '1960' })
+  await page.screenshot({ path: testInfo.outputPath('settled-after-shift.png') })
+})
+
+test('the veil is half a second long', async ({ page }) => {
+  await wanderOff(page)
+  await shift(page)
+  const duration = await veil(page).evaluate((element) => getComputedStyle(element).animationDuration)
+  expect(duration).toBe('0.48s')
+})
+
+test('a refused shift is not veiled and names no era', async ({ page }) => {
+  await wanderOff(page)
+  await shift(page)
+  await expect(eraLabel(page)).toHaveText('1960')
+  await expect(veil(page)).toHaveCount(0, { timeout: 3000 })
+
+  await place(page, 14, -25)
+  const counts = await shiftCounts(page)
+  await shift(page)
+  await expect(page.getByRole('status')).toHaveText(/Can't shift here.*2026/)
+
+  await expect(veil(page)).toHaveCount(0)
+  await expect(shiftLabel(page)).toHaveCount(0)
+  expect(await shiftCounts(page)).toEqual({ shiftCount: counts.shiftCount, refusals: counts.refusals + 1 })
+})
+
+test('twenty quick shifts all happen, and the screen is veiled far fewer times', async ({ page }) => {
+  await wanderOff(page)
+  const before = await readGame(page)
+
+  // Watch how many different veils are ever on the page.
+  await page.evaluate(() => {
+    const seen = new Set<string>()
+    ;(window as unknown as { __veils: Set<string> }).__veils = seen
+    new MutationObserver(() => {
+      const element = document.querySelector<HTMLElement>('[data-testid="shift-veil"]')
+      if (element?.dataset.shift) seen.add(element.dataset.shift)
+    }).observe(document.body, { childList: true, subtree: true })
+  })
+
+  const started = Date.now()
+  for (let press = 0; press < 20; press++) await page.keyboard.press('KeyT')
+  const seconds = (Date.now() - started) / 1000
+
+  expect((await shiftCounts(page)).shiftCount).toBe(20)
+  await expect(eraLabel(page)).toHaveText('2026')
+  expect(await readGame(page)).toEqual(before)
+
+  const veils = await page.evaluate(() => (window as unknown as { __veils: Set<string> }).__veils.size)
+  expect(veils).toBeGreaterThanOrEqual(1)
+  // Never more than one every four tenths of a second.
+  expect(veils).toBeLessThanOrEqual(Math.floor(seconds / 0.4) + 1)
+
+  // And it ends cleanly.
+  await expect(veil(page)).toHaveCount(0, { timeout: 3000 })
+})
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' })
+
+  test('a shift is an instant cut with no veil, and still names the era', async ({ page }) => {
+    await wanderOff(page)
+    const before = await readGame(page)
+
+    await shift(page)
+    await expect(eraLabel(page)).toHaveText('1960')
+    await expect(shiftLabel(page)).toHaveText('1960')
+    await expect(veil(page)).toHaveCount(0)
+    expect(await readGame(page)).toEqual({ ...before, era: '1960' })
+
+    // The name does not animate, and still goes away.
+    expect(await shiftLabel(page).evaluate((element) => getComputedStyle(element).animationName)).toBe('none')
+    await expect(shiftLabel(page)).toHaveCount(0, { timeout: 3000 })
+  })
+})

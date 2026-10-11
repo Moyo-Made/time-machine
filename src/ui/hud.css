@@ -64,6 +64,105 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * The veil over a shift that has just happened: fully there on the first
+ * frame, then fading. A mid tone close to the scene's own brightness, so that
+ * shifting repeatedly does not flash the screen between light and dark.
+ */
+.hud-veil {
+  position: absolute;
+  inset: 0;
+  background: #b9c0c5;
+  animation: hud-veil 480ms ease-out forwards;
+}
+
+@keyframes hud-veil {
+  0%,
+  12.5% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.hud-shift-label {
+  position: absolute;
+  top: 116px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 4px 18px;
+  border-radius: 8px;
+  background: var(--hud-panel);
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transform: translateX(-50%);
+  animation: hud-shift-label 1200ms ease-in forwards;
+}
+
+@keyframes hud-shift-label {
+  0%,
+  60% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.hud-sound {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 0.16);
+  /* The one place the HUD takes the mouse. */
+  pointer-events: auto;
+}
+
+.hud-sound button {
+  padding: 4px 12px;
+  border: 1px solid rgb(255 255 255 / 0.4);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hud-sound button:focus-visible,
+.hud-sound input:focus-visible {
+  outline: 2px solid #d9b25f;
+  outline-offset: 2px;
+}
+
+.hud-sound label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--hud-muted);
+}
+
+.hud-sound input {
+  flex: 1;
+  min-width: 0;
+}
+
+.hud-sound p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--hud-muted);
+}
+
 .hud-site {
   position: absolute;
   top: 50px;
@@ -168,8 +267,9 @@
 
 .hud-card {
   box-sizing: border-box;
-  width: min(100%, 23rem);
-  padding: 22px 26px;
+  /* Wide enough that no control's description wraps, which keeps it short. */
+  width: min(100%, 31rem);
+  padding: 20px 26px;
   border-radius: 12px;
   background: var(--hud-panel);
 }
@@ -195,7 +295,7 @@
   /* One shared key column, as wide as the longest key group. */
   grid-template-columns: max-content 1fr;
   align-items: center;
-  gap: 8px 16px;
+  gap: 5px 16px;
   margin: 0;
 }
 
@@ -353,6 +453,18 @@
 
 .hud-swatch-placeholder {
   background: #c9cdd4;
+}
+
+.hud-swatch-unmarked {
+  background: #b0408a;
+}
+
+.hud-evidence h3 {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hud-muted);
 }
 
 .hud-inspection {
@@ -513,5 +625,10 @@
   .hud * {
     animation: none;
     transition: none;
+  }
+
+  /* Without its fade the veil would simply cover the screen. Leave it out. */
+  .hud-veil {
+    display: none;
   }
 }

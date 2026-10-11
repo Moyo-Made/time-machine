@@ -1,6 +1,6 @@
 # Assets
 
-Source files and scripts for the game's authored 3D models. So far there is one: the merchant house.
+Source files and scripts for the game's authored 3D models. There are two: the fictional merchant house, and the Casa do Fernandez (Ilojo Bar) as a simplified reconstruction.
 
 > **The merchant house is a fictional architectural study.** It is loosely inspired by veranda-fronted merchant buildings, but it reconstructs no real building, place or period, and nothing about it is historically verified.
 
@@ -124,11 +124,59 @@ What these say:
 
 How it was measured: fetch and parse come from the User Timing entries the loader records (`model-fetch:merchant-house`, `model-parse:merchant-house`). Frame times are the gaps between animation frames, recorded in the page, with shifts triggered from inside the page. Draw calls and triangles are read from the game's performance panel at the spawn point. "Graybox box" is the same build with the model file blocked, which draws the lot exactly as it was before this asset.
 
+## The Casa do Fernandez (Ilojo Bar)
+
+> **A simplified reconstruction from cited sources, not a survey.** It shows the building as on 1 August 2016. What it shows was counted or measured in photographs; what could not be was replaced by the plainest form that keeps the outline. The evidence behind every part is in [docs/milestone-07/art-direction.md](../docs/milestone-07/art-direction.md).
+
+| Path | What it is |
+|---|---|
+| `blender/ilojo_bar.py` | Builds the model from named dimensions, each commented with its source |
+| `ilojo-bar/ilojo-bar.blend` | The Blender source file |
+| `ilojo-bar/previews/` | Pictures of the model |
+| `../src/render/models/ilojo-bar.glb` | The export |
+
+| Command | What it does |
+|---|---|
+| `npm run asset:generate:ilojo` | Rebuilds the `.blend` from the script. Refuses if the file exists; add `-- --force` |
+| `npm run asset:export:ilojo` | Exports the `.blend`, as it is, to the GLB, **one mesh per part** |
+
+**It is in parts, and the parts matter.** Each top-level collection called `Part.<name>` is exported as one mesh called `<name>`. The game holds what each part rests on (evidenced, estimated or placeholder) and a test fails if the names differ. When editing the `.blend`:
+
+- **Do not move an object to another part to tidy up.** The part says what evidence it rests on.
+- **Do not add detail the photographs do not show**, and do not add lettering.
+- **Keep `cap-and-rear` a plain mass.** It stands for what is not reconstructed.
+- An object outside every `Part.` collection stops the export.
+
+It has no colour attribute and no textures: every material is one plain colour.
+
+| | Ceiling | This model |
+|---|---|---|
+| Triangles | 30,000 | 6,234 |
+| Draw calls | 24 | 18 |
+| File size | 600 KB | 291 KB |
+| Textures | none | none |
+
+## Sound
+
+There are no audio assets. Every sound is synthesised at run time by `src/audio/engine.ts`, and a test fails if an audio file is added to the build.
+
+| Sound | Made from | Source | Licence | Attribution | Used for |
+|---|---|---|---|---|---|
+| Ambience | Brown noise through a slowly drifting low-pass filter | Original, generated in code | The repository's own; no third-party material | None needed | A neutral outdoor wash while the player has control |
+| Shift | Two sine tones gliding upwards, 0.4 s | As above | As above | None needed | A shift that happened |
+| Refused | One low sine tone, 0.1 s | As above | As above | None needed | A shift that was refused |
+| Discovery | Two sine notes | As above | As above | None needed | A new observation |
+| Connection | Three sine notes | As above | As above | None needed | An observation that completes a connection |
+
+**It is an artistic soundscape, not a recording of any place.** Nothing in it imitates a voice, a vehicle, an announcement or an event, and it is the same at every site and on every day.
+
 ## Looking at a model outside the game
 
 Run `npm run dev` and open `/assets/preview/index.html`. Drag to orbit and scroll to zoom. Useful additions to the address:
 
-- `?context=1` adds grey neighbours and a 1.7 m figure for scale.
+- `?model=/src/render/models/ilojo-bar.glb&fit=1` shows the other model, with the views scaled to its size.
+- `?figure=1` adds a 1.7 m figure for scale. `?context=1` adds the merchant house's grey neighbours as well.
+- `?basis=upper-floor:evidenced,ground-floor:estimated` colours named parts as the game's evidence view would.
 - `?view=front`, `left`, `right`, `street` or `top` picks the camera.
 - `?sun=game` lights it from behind, as the game's sun did before it was moved.
 

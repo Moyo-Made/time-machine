@@ -30,4 +30,10 @@ export const ilojoBar: Site = {
   // square; the bearing comes from the plot's position on the maps and has not
   // been measured.
   gridRotation: 75,
+  // AN ARTISTIC ASSUMPTION, the same on both days. The dated photographs were
+  // taken in the afternoon, so the sun is in front of the building, a little
+  // to the Bamgbose Street side and about 40 degrees up. It is not computed:
+  // the building's bearing is itself an estimate. The haze starts beyond the
+  // far end of the walkable ground, so nothing the player can reach is dimmed.
+  atmosphere: { sun: { x: -0.32, y: 0.64, z: 0.7 }, haze: [70, 260] },
 }
