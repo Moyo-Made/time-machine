@@ -74,7 +74,7 @@ Turns input into camera movement. It has three layers:
 
 Owns which eras exist and what shifting between them does to the player.
 
-- `era/eras.ts` lists the eras, maps each to its world, and precomputes each world's collision surroundings.
+- `era/eras.ts` builds its lookups from the sites: each era's world, label, site and collision surroundings. An era belongs to exactly one site, so the active era alone says where the player is.
 - `era/shift.ts` has `shiftPlayer(era, player, radius)`. It is pure and synchronous and returns the era and player state afterwards with one of three outcomes: `kept` (same spot), `moved` (backed out of new geometry) or `blocked` (refused; same era, same player object). Yaw and pitch are never changed.
 - `era/useShiftKey.ts` binds T to it and applies the result.
 
@@ -120,7 +120,7 @@ The first gameplay loop: explore, observe, discover, connect. The player stays a
 
 - A `PointOfInterest` holds observed and unknown statements only. It cannot hold an inference.
 - A `Connection` holds inferred and unknown statements only. It cannot claim an observation; the facts it rests on are shown by quoting the first statement of each point of interest it links.
-- Both carry `provenance`, which has one allowed value today, `'fictional'`. Real content would add a value that requires sources.
+- Both carry `provenance`. See "Sites and sourced content" below for what the second value, `'documented'`, requires.
 
 A point of interest belongs to the one era whose `WorldDefinition` lists it, which is how era availability works for entities too. Connections link two points of interest in different eras and live beside the layouts in `world/street/connections.ts`. The content files open with the writing rules: observed means only what could be seen; nothing explains why anything is as it is.
 
@@ -160,6 +160,46 @@ A point of interest belongs to the one era whose `WorldDefinition` lists it, whi
 
 **Markers** (`render/PoiMarkers.tsx`) show where something can be inspected. They are kept quiet so that exploring does not become chasing icons: ordinary depth testing, so anything in front hides them; shown only when the player is nearly in range; gone once the point of interest is discovered.
 
+### Sites and sourced content (built in Milestone 06)
+
+The rules that let the game hold content about a real place, and the first place that uses them: `world/ilojo/`, a plot on Tinubu Square, Lagos, on two days in 2016.
+
+**A site is a place in two or more eras.** `world/sites.ts` lists them; the first is the one the game opens on. A `Site` has an ordered list of `Era`s, its connections, one `provenance`, and `gridRotation`: collision boxes follow the grid, so a real site turns the grid to match its buildings and records how far. An `Era` has an id that is never shown, a `label` that is, a world, and a date that is null exactly when the site is fictional. Shifting moves through a site's eras in order and never leaves the site.
+
+**Sources are a registry** (`content/sources.ts`). Each has an id shared with the research notes in `docs/research/`, an address, its rights, a credit line, and a `DateClaim`: a range of ISO dates plus how the date is known (camera, published, catalogued, estimated and so on). There is no bare year anywhere.
+
+**Provenance has two values, and the compiler enforces the difference.** A `'fictional'` record is as before. A `'documented'` point of interest must hold `Cited<Observed>` statements, which carry at least one source id; a documented connection must hold `Cited<Inferred>`. Leaving the sources off does not compile.
+
+**A fourth kind of statement, `Reported`,** holds what a named source states when the source has been read but what it rests on has not been checked. It is kept apart from `Observed` so that "a study says a deed says" never carries the weight of "you can see it".
+
+**Every modelled thing can say what it rests on.** `Footprint.evidence` holds a `Basis` (`evidenced`, `estimated` or `placeholder`), its sources, and for an estimate the assumption made.
+
+**`content/integrity.ts` checks what types cannot.** `checkAll(sites, sources)` returns a list of problems, each with a rule, a path and a sentence. A unit test requires it to be empty for the real data:
+
+| Rule | What it catches |
+|---|---|
+| `source-missing` | Something cites an id that is not in the registry |
+| `source-invalid` | A malformed entry, or anything in copyright marked as displayable |
+| `source-unused` | A registered source nothing cites |
+| `uncited` | A documented claim with no source |
+| `out-of-era` | An observation resting on a source not dated to within its era. Overlap is not enough: a print catalogued only as "1930 to 1972" cannot stand for 1948 |
+| `no-basis`, `no-assumption` | A documented entity that does not say what it rests on, or an estimate that does not say what was assumed |
+| `placeholder-claims` | A placeholder that is modelled or described |
+| `provenance-mixed`, `era-date` | A site that mixes fictional and documented, or a date on the wrong kind |
+| `duplicate-id`, `bad-reference`, `empty-text` | Structural mistakes |
+
+**Moving between sites** (`era/useSiteKey.ts`). G sets the era to the next site's first era and puts the player on its spawn point, in one synchronous handler, for the same reason a shift does: no frame may see one site's position among another site's solids. The store still holds only an era; the site follows from it. The journal keeps every site's records but shows only those of the site the player is in, under that site's label.
+
+**The evidence view** (V, at a documented site). `render/WorldView.tsx` swaps every material for one of three flat colours chosen from `evidence.basis`, and the HUD shows a key with the count of each kind in the current era. It changes nothing but materials: collision, sight and shifting are untouched.
+
+**The real site's data follows three habits** worth keeping for the next one. Dimensions that come from a source are named constants with the source's own units beside them (`feet(61, 1)`), so a misreading can be corrected in one place. Every entity is built through `evidenced`, `estimated` or `placeholder`, so the basis cannot be forgotten. And each era is a single stated day: anything taken from a photograph of another day is an estimate that says which day.
+
+**Content at the real site** (`world/ilojo/pointsOfInterest.ts`, `connections.ts`) follows the writing rules at the top of those files: an observation cites only photographs taken on the day its era shows, a reported statement names its source in the sentence, nobody is named, and nothing says who did anything or why. `content.test.ts` checks what can be checked: each observation's sources against its era, that the demolition is named only in reported statements, that every reported statement names a source, that every registered source appears in the research inventory, and a list of words that assert a cause or a culprit.
+
+**Citations on screen.** `ui/Statements.tsx` prints the source ids after any statement that has them and, for documented content, heads observations "Observed in the sources". The journal lists the sources of what the player has found so far, with each date in words and how it is known (`content/dates.ts`).
+
+Two things back this up. A test lists every picture file the build can ship and fails if one is added, since nearly every archival image consulted is in copyright. And the panels take their label from the record's provenance, so documented content can never appear under the fictional label or the reverse.
+
 ## Biggest technical risks
 
 1. **Era shifting cost with real assets.** Milestone 03 gives the first data point: one 6,200-triangle, untextured model costs one or two dropped frames the first time it appears and nothing after. That is one small model. The real risk is unchanged: doubled memory, loading hitches, shader compile stalls and a hard visual cut once an era holds many textured assets. Warming models up before they are first shown, and loading by distance, are the obvious next experiments.
@@ -168,7 +208,7 @@ A point of interest belongs to the one era whose `WorldDefinition` lists it, whi
 4. **Per-frame state leaking into React.** See "Where state lives". This is a discipline, not something the compiler enforces.
 5. **Input and platform.** Pointer lock has quirks: Chrome refuses to re-capture for about a second after Esc, Safari behaves differently, and it is blocked inside some iframes. There is no touch or gamepad support.
 6. **Testing 3D automatically.** Tests can prove movement, collision, shifting and that the page renders. They cannot judge frame rate on a given machine, how the mouse feels, or how the scene looks.
-7. **Integrity of content.** The types stop an inference being filed as an observation, and a test rejects words that assert an event, cause, date or use. Neither can judge whether a sentence is true or fair. Once real history is involved, every statement will need a source and a human review; the `provenance` field is where that requirement will be enforced.
+7. **Integrity of content.** The types stop an inference being filed as an observation, and a test rejects words that assert an event, cause, date or use. Neither can judge whether a sentence is true or fair. For documented content the compiler now requires a source on every claim and `content/integrity.ts` checks that the source exists and dates from the right era. No check can tell whether a sentence fairly reports its source: that still needs a human review of every statement.
 8. **Sight is tested against boxes.** What the player can inspect is decided by footprints and heights, not by the meshes that are drawn. With one model that is a small mismatch; with many detailed ones it will be noticeable, and focus may need to test real geometry.
 
 ## Testing
@@ -182,6 +222,8 @@ A point of interest belongs to the one era whose `WorldDefinition` lists it, whi
   - lines of view against boxes, and `findFocus`, both on made-up geometry and from named first-person viewpoints on the real street, including ones where the player is close to something but clearly looking elsewhere;
   - the journal, the connection, the stale-panel guard and the store's rules;
   - the content itself: its structure, that every point of interest can be focused from somewhere a player can stand, and a wording check;
+  - the integrity rules, each broken on purpose in an invented fixture site, and the real sites against all of them;
+  - the real plot: its dimensions against the figures they were read from, both days walked and shifted between from every point a player can stand, and a wording check on its assumptions;
   - the whole loop with no browser: observe in one era, shift, observe in the other, connect;
   - the exported model itself, loaded with three's own loader: its ceilings, scale and orientation, and its fit on its lot.
 - **Browser tests** (`e2e/`, Playwright) load the real game, click in, walk, strafe into a building, move the mouse, shift era in each of the three ways, shift repeatedly while moving, and check the HUD and the input rules. They also check that the model appears on its lot in 1960 and is gone in 2026, and that with the model file blocked the game still runs with the graybox box and the same collision. For discovery they aim the view with real mouse movement and check the prompt, inspecting, the journal, the connection, that nothing can be inspected through a wall or from another era, that the panels do not interfere with moving, shifting or colliding, and how pause, key repeat and shifting with a panel open behave. They read game state through `window.__TM__`, a handle installed only in development builds.

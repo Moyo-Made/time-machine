@@ -17,7 +17,7 @@ export interface PlayerHandle {
   /** The live state, as of the last simulated frame. */
   getState(): PlayerState
   /** Moves the player. The view direction is left alone. */
-  teleport(x: number, z: number): void
+  teleport(x: number, z: number, yaw?: number): void
 }
 
 interface PlayerControllerProps {
@@ -60,8 +60,9 @@ export function PlayerController({
     ref,
     () => ({
       getState: () => state.current,
-      teleport: (x, z) => {
-        state.current = { ...state.current, x, z }
+      teleport: (x, z, yaw) => {
+        state.current =
+          yaw === undefined ? { ...state.current, x, z } : { x, z, yaw, pitch: 0 }
       },
     }),
     [],

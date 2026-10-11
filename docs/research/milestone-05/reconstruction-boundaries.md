@@ -40,8 +40,10 @@ Nothing may appear without one of these three marks. The player must be able to 
 | Three wide bays and three narrow ones, the wide ones at the left as seen from the square | Evidenced as a pattern; estimated in size | Measured on C-01 and C-12. That the left end is the Bamgbose Street end is inferred from a street sign in the 1946 photograph |
 | Height to the top of the parapet | Estimated | About 10 m, by proportion from photographs |
 | The side on Bamgbose Street: two bays, same treatment | Evidenced, partly | C-05, C-06. Undated; placed in summer 2016 by inference |
-| The side's length | Estimated | About 19 m, from the same deed sketch |
-| The plan: L-shaped | Estimated | Deed sketch and 2012 ground plan, both seen small |
+| The plot's depth on Bamgbose Street | Estimated | About 19 m, from the same deed sketch |
+| The two-storey block's depth | Estimated | About 7.5 m: two bays, judged from C-05 and C-06 |
+| A lower bare-brick range behind it on the Bamgbose Street side | Estimated | C-05, C-06. Assumed to fill the corner plot to its depth |
+| The plan: L-shaped | Estimated | Deed sketch and 2012 ground plan, both seen small. Too small to place the rear wing, which is not modelled |
 | The rear | Placeholder | One partial view |
 | The roof: metal sheet behind the parapet | Estimated | C-04, partly seen |
 | Wall finish: weathered grey and buff render, stained | Evidenced | C-10 to C-13 |

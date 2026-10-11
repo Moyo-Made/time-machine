@@ -117,6 +117,7 @@ Notes on this table:
 
 | | |
 |---|---|
+| Ref | T-thesis |
 | Title | The Curious Case of Casa do Fernandez: Challenges of Heritage Management in Nigeria |
 | Author | Femke van Zeijl |
 | Details | MA thesis, African Studies (specialisation History), Faculty of Humanities, Leiden University, 31 August 2021. Supervisor K. Fatah-Black |

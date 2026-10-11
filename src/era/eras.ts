@@ -1,26 +1,47 @@
 import { worldSurroundings } from '../world/colliders'
-import { street1960 } from '../world/street/era1960'
-import { street2026 } from '../world/street/era2026'
-import type { Surroundings, WorldDefinition } from '../world/types'
+import { SITES } from '../world/sites'
+import type { Era, EraId, Site, Surroundings, WorldDefinition } from '../world/types'
 
-// The era labels are placeholders for two fictional graybox layouts. See the
-// note at the top of world/street/layout.ts.
-export type EraId = '1960' | '2026'
+export type { EraId } from '../world/types'
 
-export const ERA_ORDER: readonly EraId[] = ['1960', '2026']
+// Lookups from an era id, built once from the sites. An era belongs to exactly
+// one site, so the active era alone says which site the player is in.
 
-export const INITIAL_ERA: EraId = '2026'
+const entries = SITES.flatMap((site) => site.eras.map((era) => ({ site, era })))
 
-export const WORLDS: Record<EraId, WorldDefinition> = {
-  '1960': street1960,
-  '2026': street2026,
+function byEra<T>(pick: (entry: { site: Site; era: Era }) => T) {
+  return Object.fromEntries(entries.map((entry) => [entry.era.id, pick(entry)])) as Record<EraId, T>
 }
+
+export const ERAS: Record<EraId, Era> = byEra(({ era }) => era)
+
+/** The site each era belongs to. */
+export const SITE_OF: Record<EraId, Site> = byEra(({ site }) => site)
+
+/** Every era of every site, each site's in its own order. */
+export const ERA_ORDER: readonly EraId[] = entries.map(({ era }) => era.id)
+
+export const INITIAL_ERA: EraId = SITES[0].initialEra
+
+export const WORLDS: Record<EraId, WorldDefinition> = byEra(({ era }) => era.world)
 
 /** What the player collides with in each era, built once. */
-export const SURROUNDINGS: Record<EraId, Surroundings> = {
-  '1960': worldSurroundings(street1960),
-  '2026': worldSurroundings(street2026),
+export const SURROUNDINGS: Record<EraId, Surroundings> = byEra(({ era }) =>
+  worldSurroundings(era.world),
+)
+
+/** What the player reads for an era. Never show the id itself. */
+export const eraLabel = (era: EraId) => ERAS[era].label
+
+/** The era a shift leads to: the next one of the same site, wrapping round. */
+export function nextEra(era: EraId): EraId {
+  const order = SITE_OF[era].eras
+  const index = order.findIndex((candidate) => candidate.id === era)
+  return order[(index + 1) % order.length]!.id
 }
 
-export const nextEra = (era: EraId): EraId =>
-  ERA_ORDER[(ERA_ORDER.indexOf(era) + 1) % ERA_ORDER.length]!
+/** The site after this era's, wrapping round. */
+export function nextSite(era: EraId): Site {
+  const index = SITES.indexOf(SITE_OF[era])
+  return SITES[(index + 1) % SITES.length]!
+}

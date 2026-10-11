@@ -1,6 +1,8 @@
 // World data is plain and immutable: no three.js, no React.
 // Units are metres. Y is up; the ground plane is x/z.
 
+import type { DateClaim, SourceId } from '../content/sources'
+
 /** Axis-aligned rectangle on the ground plane. */
 export interface Rect {
   readonly minX: number
@@ -41,10 +43,29 @@ export interface Footprint {
   /** Extent along z. */
   readonly depth: number
   readonly height: number
+  /** What this rests on. Every entity of a documented site has one. */
+  readonly evidence?: Evidence
+}
+
+/**
+ * How much of a modelled thing is evidence.
+ *
+ * - evidenced: built as seen in a cited, dated image or map.
+ * - estimated: it existed; its size or position is an estimate.
+ * - placeholder: something stood there; what it looked like is not known.
+ */
+export type Basis = 'evidenced' | 'estimated' | 'placeholder'
+
+export interface Evidence {
+  readonly basis: Basis
+  /** May be empty only for a placeholder. */
+  readonly sources: readonly SourceId[]
+  /** For an estimate: what was assumed, in plain words. */
+  readonly assumption?: string
 }
 
 export interface Surface extends Footprint {
-  readonly kind: 'road' | 'sidewalk' | 'paving'
+  readonly kind: 'road' | 'sidewalk' | 'paving' | 'ground' | 'rubble' | 'sheet'
 }
 
 export type Cardinal = 'north' | 'south' | 'east' | 'west'
@@ -67,7 +88,21 @@ export interface Building extends Footprint {
   readonly model?: ModelRef
 }
 
-export type PropKind = 'lampPost' | 'crate' | 'barrel' | 'bench' | 'cart' | 'car' | 'well'
+export type PropKind =
+  | 'lampPost'
+  | 'crate'
+  | 'barrel'
+  | 'bench'
+  | 'cart'
+  | 'car'
+  | 'well'
+  | 'pole'
+  | 'umbrella'
+  | 'minibus'
+  | 'signboard'
+  | 'stall'
+  | 'heap'
+  | 'fence'
 
 export interface Prop extends Footprint {
   readonly kind: PropKind
@@ -90,11 +125,14 @@ export interface Volume {
   readonly maxZ: number
 }
 
-// What can be said about a place is one of three kinds, and the types keep
+// What can be said about a place is one of four kinds, and the types keep
 // them apart: a point of interest cannot hold an inference, and a connection
 // cannot claim a direct observation.
 
-/** Directly visible in the world, to anyone standing there. */
+/**
+ * Directly visible in the world, to anyone standing there. In documented
+ * content: visible in a cited image or map of that era.
+ */
 export interface Observed {
   readonly kind: 'observed'
   readonly text: string
@@ -113,19 +151,31 @@ export interface Unknown {
 }
 
 /**
- * Where a record's content comes from. Everything is invented test content
- * today. Real content would need a further value that carries its sources.
+ * A named source states this. The source has been read; what it rests on has
+ * not been checked. Kept apart from `observed` so that "a study says a deed
+ * says" never carries the weight of "you can see it".
  */
-export type Provenance = 'fictional'
+export interface Reported {
+  readonly kind: 'reported'
+  readonly text: string
+  readonly sources: readonly [SourceId, ...SourceId[]]
+}
+
+/** A statement that names what it rests on. At least one source. */
+export type Cited<S> = S & { readonly sources: readonly [SourceId, ...SourceId[]] }
 
 /**
- * Something the player can inspect by looking at it. It belongs to the one era
- * whose world lists it, so its id is unique across all eras.
+ * Where a record's content comes from.
+ *
+ * - fictional: invented test content. It cites nothing and claims nothing.
+ * - documented: about a real place. The types below will not accept a
+ *   documented record whose statements lack sources.
  */
-export interface PointOfInterest {
+export type Provenance = 'fictional' | 'documented'
+
+interface PointOfInterestBase {
   readonly id: string
   readonly title: string
-  readonly provenance: Provenance
   /**
    * The player must be looking at this box. For a location, keep its top below
    * eye height so the player can never be standing inside it.
@@ -137,18 +187,44 @@ export interface PointOfInterest {
   readonly range: number
   /** The entity it is about, if it is about one. That entity never hides it. */
   readonly entityId?: string
-  /** The first statement is the headline fact, quoted where this is cited. */
-  readonly statements: readonly [Observed, ...(Observed | Unknown)[]]
 }
 
-/** What follows from having inspected two points of interest. Holds no observations of its own. */
-export interface Connection {
+/**
+ * Something the player can inspect by looking at it. It belongs to the one era
+ * whose world lists it, so its id is unique across all eras.
+ *
+ * The first statement is the headline fact, quoted where this is cited.
+ */
+export type PointOfInterest =
+  | (PointOfInterestBase & {
+      readonly provenance: 'fictional'
+      readonly statements: readonly [Observed, ...(Observed | Unknown)[]]
+    })
+  | (PointOfInterestBase & {
+      readonly provenance: 'documented'
+      readonly statements: readonly [Cited<Observed>, ...(Cited<Observed> | Reported | Unknown)[]]
+    })
+
+interface ConnectionBase {
   readonly id: string
   readonly title: string
-  readonly provenance: Provenance
   readonly between: readonly [string, string]
-  readonly statements: readonly (Inferred | Unknown)[]
 }
+
+/**
+ * What follows from having inspected two points of interest. Holds no
+ * observations of its own. A documented inference cites the observations it
+ * rests on.
+ */
+export type Connection =
+  | (ConnectionBase & {
+      readonly provenance: 'fictional'
+      readonly statements: readonly (Inferred | Unknown)[]
+    })
+  | (ConnectionBase & {
+      readonly provenance: 'documented'
+      readonly statements: readonly (Cited<Inferred> | Reported | Unknown)[]
+    })
 
 export interface Spawn {
   readonly x: number
@@ -169,4 +245,42 @@ export interface WorldDefinition {
   readonly props: readonly Prop[]
   /** What can be inspected in this era. */
   readonly pointsOfInterest: readonly PointOfInterest[]
+}
+
+/** Every era of every site. An id is never shown to the player; the label is. */
+export type EraId = '1960' | '2026' | 'ilojo-2016-08-01' | 'ilojo-2016-09-18'
+
+export type SiteId = 'graybox-street' | 'ilojo-bar'
+
+/** One dated state of a site. */
+export interface Era {
+  readonly id: EraId
+  /** What the player reads. */
+  readonly label: string
+  /** When this state dates from. Null exactly when the site is fictional. */
+  readonly date: DateClaim | null
+  readonly world: WorldDefinition
+}
+
+/**
+ * A place the player can explore, in two or more eras. Shifting moves through
+ * `eras` in order and never leaves the site.
+ *
+ * A site is all one provenance: a documented site holds no fictional record,
+ * and a fictional one no documented record.
+ */
+export interface Site {
+  readonly id: SiteId
+  readonly name: string
+  readonly provenance: Provenance
+  readonly eras: readonly [Era, Era, ...Era[]]
+  /** The era the player starts in. */
+  readonly initialEra: EraId
+  readonly connections: readonly Connection[]
+  /**
+   * How far the site's grid is turned from true north, in degrees clockwise.
+   * Collision boxes follow the grid, so a real site turns the grid to match
+   * its buildings and records the turn here.
+   */
+  readonly gridRotation: number
 }

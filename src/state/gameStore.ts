@@ -28,6 +28,8 @@ interface GameState {
   /** What the inspection panel was opened on. Shown only through `shownInspection`. */
   inspection: Inspection | null
   journalOpen: boolean
+  /** Colour the world by what each thing rests on. Only has an effect in a documented site. */
+  evidenceView: boolean
   /** Everything observed so far. Kept when panels close and when the era changes. */
   journal: Journal
   perfVisible: boolean
@@ -45,6 +47,7 @@ interface GameState {
   recordInspection: (journal: Journal, inspection: Inspection | null) => void
   closeInspection: () => void
   toggleJournal: () => void
+  toggleEvidenceView: () => void
   showNotice: (text: string) => void
   setPlayer: (player: PlayerState) => void
   togglePerf: () => void
@@ -59,6 +62,7 @@ export const useGameStore = create<GameState>()((set) => ({
   focus: null,
   inspection: null,
   journalOpen: false,
+  evidenceView: false,
   journal: EMPTY_JOURNAL,
   perfVisible: true,
   perf: null,
@@ -69,6 +73,7 @@ export const useGameStore = create<GameState>()((set) => ({
   recordInspection: (journal, inspection) => set({ journal, inspection }),
   closeInspection: () => set({ inspection: null }),
   toggleJournal: () => set((state) => ({ journalOpen: !state.journalOpen })),
+  toggleEvidenceView: () => set((state) => ({ evidenceView: !state.evidenceView })),
   showNotice: (text) => set((state) => ({ notice: { id: (state.notice?.id ?? 0) + 1, text } })),
   setPlayer: (player) => set({ player }),
   togglePerf: () => set((state) => ({ perfVisible: !state.perfVisible })),

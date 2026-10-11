@@ -64,9 +64,32 @@
   font-variant-numeric: tabular-nums;
 }
 
+.hud-site {
+  position: absolute;
+  top: 50px;
+  left: 50%;
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  margin: 0;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--hud-panel);
+  font-size: 0.8125rem;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.hud-site span {
+  margin-left: 6px;
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hud-muted);
+}
+
 .hud-notice {
   position: absolute;
-  top: 58px;
+  top: 84px;
   left: 50%;
   width: max-content;
   max-width: calc(100vw - 24px);
@@ -87,8 +110,14 @@
     transform: none;
   }
 
+  .hud-site {
+    top: 102px;
+    left: 12px;
+    transform: none;
+  }
+
   .hud-notice {
-    top: 108px;
+    top: 134px;
   }
 }
 
@@ -245,6 +274,87 @@
   line-height: 1.38;
 }
 
+.hud-cite {
+  font-style: normal;
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  color: var(--hud-muted);
+}
+
+.hud-panel-sources {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--hud-muted);
+}
+
+.hud-journal-sources dl {
+  margin: 2px 0 0;
+}
+
+.hud-journal-sources dl > div {
+  margin: 3px 0;
+}
+
+.hud-journal-sources dt {
+  display: inline;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-journal-sources dt::after {
+  content: ' ';
+}
+
+.hud-journal-sources dd {
+  display: inline;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.hud-source-credit {
+  color: var(--hud-muted);
+}
+
+.hud-evidence {
+  bottom: 56px;
+  left: 12px;
+  font-size: 0.8125rem;
+}
+
+.hud-evidence ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hud-evidence li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 3px 0;
+}
+
+.hud-swatch {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgb(255 255 255 / 0.55);
+  transform: translateY(1px);
+}
+
+/* The same colours as the materials in render/WorldView.tsx. */
+.hud-swatch-evidenced {
+  background: #2f7d4f;
+}
+
+.hud-swatch-estimated {
+  background: #e2a93b;
+}
+
+.hud-swatch-placeholder {
+  background: #c9cdd4;
+}
+
 .hud-inspection {
   top: 76px;
   left: 12px;
@@ -261,7 +371,7 @@
   line-height: 1.34;
 }
 
-.hud-journal .hud-fictional {
+.hud-journal .hud-provenance {
   margin: 3px 0 5px;
 }
 
@@ -294,7 +404,7 @@
   font-size: 0.8125rem;
 }
 
-.hud-fictional {
+.hud-provenance {
   margin: 4px 0 8px;
   padding: 3px 8px;
   border-left: 3px solid #d9b25f;

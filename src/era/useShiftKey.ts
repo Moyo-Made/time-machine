@@ -2,7 +2,7 @@ import { useEffect, type RefObject } from 'react'
 import { isShortcut } from '../keys'
 import type { PlayerHandle } from '../player/PlayerController'
 import { useGameStore } from '../state/gameStore'
-import { nextEra } from './eras'
+import { eraLabel, nextEra } from './eras'
 import { shiftPlayer } from './shift'
 
 /**
@@ -26,7 +26,7 @@ export function useShiftKey(player: RefObject<PlayerHandle | null>, radius: numb
 
       const result = shiftPlayer(era, handle.getState(), radius)
       if (result.outcome === 'blocked') {
-        showNotice(`Can't shift here: this spot is occupied in ${nextEra(era)}.`)
+        showNotice(`Can't shift here: this spot is occupied in ${eraLabel(nextEra(era))}.`)
         return
       }
       if (result.outcome === 'moved') handle.teleport(result.player.x, result.player.z)

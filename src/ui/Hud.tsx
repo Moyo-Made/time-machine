@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { BASIS_MEANING, SITE_KIND, SITE_NOTE } from '../content/provenance'
+import { eraLabel, SITE_OF, WORLDS } from '../era/eras'
 import { isShortcut } from '../keys'
 import { useGameStore } from '../state/gameStore'
 import { FocusPrompt } from './FocusPrompt'
@@ -13,6 +15,8 @@ const CONTROLS = [
   { keys: ['T'], action: 'Shift era' },
   { keys: ['E'], action: 'Inspect what you are looking at' },
   { keys: ['J'], action: 'Open or close the journal' },
+  { keys: ['G'], action: 'Go to the next site' },
+  { keys: ['V'], action: 'Show what each thing rests on' },
   { keys: ['Esc'], action: 'Release the mouse' },
   { keys: ['P'], action: 'Show or hide performance' },
 ] as const
@@ -39,6 +43,39 @@ function PerfPanel() {
   )
 }
 
+/**
+ * The key to the evidence view: what the three colours mean, and how many
+ * things in this era are of each kind. The colours are named in words, so
+ * nothing depends on telling them apart by eye.
+ */
+function EvidenceLegend() {
+  const era = useGameStore((state) => state.era)
+  const world = WORLDS[era]
+  const entities = [...world.surfaces, ...world.buildings, ...world.props]
+
+  return (
+    <section className="hud-panel hud-evidence" aria-label="Evidence view" data-testid="evidence">
+      <header>
+        <h2>Evidence view</h2>
+        <span className="hud-panel-close">
+          <kbd>V</kbd> close
+        </span>
+      </header>
+      <ul>
+        {BASIS_MEANING.map(({ basis, name, meaning }) => (
+          <li key={basis} data-testid={`evidence-${basis}`}>
+            <i className={`hud-swatch hud-swatch-${basis}`} />
+            <span>
+              <strong>{name}</strong> ({entities.filter((entity) => entity.evidence?.basis === basis).length}):{' '}
+              {meaning}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 /** DOM overlay above the canvas. Never takes pointer events, so clicks reach the game. */
 export function Hud() {
   const engaged = useGameStore((state) => state.engaged)
@@ -47,10 +84,21 @@ export function Hud() {
   const focused = useGameStore((state) => state.focus !== null)
   const perfVisible = useGameStore((state) => state.perfVisible)
   const togglePerf = useGameStore((state) => state.togglePerf)
+  const evidenceView = useGameStore((state) => state.evidenceView)
+  const site = SITE_OF[era]
+  const documented = site.provenance === 'documented'
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code === 'KeyP' && !event.repeat && !isShortcut(event)) togglePerf()
+      if (event.repeat || isShortcut(event)) return
+      if (event.code === 'KeyP') togglePerf()
+      if (event.code === 'KeyV') {
+        // A gameplay key: it does nothing unless the player has control.
+        const state = useGameStore.getState()
+        if (!state.engaged) return
+        if (SITE_OF[state.era].provenance === 'documented') state.toggleEvidenceView()
+        else state.showNotice('Nothing to show here: this street is fictional and rests on no evidence.')
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -62,8 +110,11 @@ export function Hud() {
 
       <div className="hud-era">
         <span>Era</span>
-        <strong data-testid="era">{era}</strong>
+        <strong data-testid="era">{eraLabel(era)}</strong>
       </div>
+      <p className="hud-site" data-testid="site">
+        {site.name} <span>{SITE_KIND[site.provenance]}</span>
+      </p>
       {notice && (
         // Keyed so that a repeated message restarts its fade-out.
         <p key={notice.id} className="hud-notice" role="status">
@@ -77,10 +128,17 @@ export function Hud() {
           <FocusPrompt />
           <InspectionPanel />
           <Journal />
+          {documented && evidenceView && <EvidenceLegend />}
           {/* Movement keys are taught on the start card; this line is for the rest. */}
           <p className="hud-hint">
-            <kbd>T</kbd> shift era · <kbd>E</kbd> inspect · <kbd>J</kbd> journal · <kbd>Esc</kbd>{' '}
-            release
+            <kbd>T</kbd> shift era · <kbd>E</kbd> inspect · <kbd>J</kbd> journal · <kbd>G</kbd> next site
+            {documented && (
+              <>
+                {' '}
+                · <kbd>V</kbd> evidence
+              </>
+            )}{' '}
+            · <kbd>Esc</kbd> release
           </p>
         </>
       ) : (
@@ -100,8 +158,8 @@ export function Hud() {
                 </div>
               ))}
             </dl>
-            <p className="hud-note">
-              A fictional graybox test street. Not a historical reconstruction of any real place.
+            <p className="hud-note" data-testid="site-note">
+              {SITE_NOTE[site.provenance]}
             </p>
             <p className="hud-note hud-touch">A keyboard and mouse are needed for now.</p>
           </div>

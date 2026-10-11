@@ -2,7 +2,7 @@
 
 A browser-based 3D historical exploration game. You are an invisible observer: you walk reconstructed places, shift between eras, and investigate what you find, without changing history.
 
-This repository holds a vertical slice. Five milestones are done:
+This repository holds a vertical slice. Six milestones are done:
 
 - **Milestone 01**: a graybox street you can explore in first person.
 - **Milestone 02**: time shift. Press T to switch the street between two layouts, labelled 1960 and 2026, without losing your position or view.
@@ -10,9 +10,11 @@ This repository holds a vertical slice. Five milestones are done:
 - **Milestone 04**: observation and discovery. Look at one of three points of interest, press E to inspect it, and it is recorded in a journal. Observing the same lot in both eras reveals one connection.
 - **Milestone 05**: research, with no change to the game. It chose the first real Lagos site to reconstruct and set the rules for doing so. See [docs/research/milestone-05/](docs/research/milestone-05/).
 
-There are no characters, and no real historical content in the game yet.
+- **Milestone 06**: the first real site, in plain boxes. A plot on Tinubu Square, Lagos, on two days in 2016, with seven things to inspect and every statement tied to a source. See "The first real site" below.
 
-> **The street is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Every observation and connection in the game is invented test content, and says so on screen. Nothing in the game makes a historical claim. The research notes in `docs/research/` do, and each one cites its source.
+There are no characters.
+
+> **The street the game opens on is fictional.** Both layouts are graybox test environments invented to exercise the game's systems. They are not historically verified reconstructions of Lagos or of any other place, and "1960" and "2026" are placeholder labels for two test datasets. The one modelled building is a fictional architectural study, not a reconstruction of a real building or period. Every observation and connection in the game is invented test content, and says so on screen. The street makes no historical claim. The second site and the research notes in `docs/research/` do, and each claim cites its source.
 
 ## Run it
 
@@ -33,6 +35,8 @@ Open the address it prints, then click the page to take control.
 | T | Shift to the other era |
 | E | Inspect what you are looking at; press again to close |
 | J | Open or close the journal |
+| G | Go to the next site |
+| V | At the real site: colour everything by what it rests on |
 | PgUp, PgDn | Scroll the journal, if the window is too short to show it all |
 | Esc | Release the mouse |
 | P | Show or hide the performance readout |
@@ -92,7 +96,8 @@ The browser tests start their own dev server on port 5199 and drive the Google C
 
 ```
 src/
-  world/    Places, as plain data: the two street layouts, collision boxes
+  world/    Places, as plain data: sites, the two street layouts, collision boxes
+  content/  The source registry and the rules that keep sourced content honest
   player/   Movement and collision (pure functions) and the first-person controller
   era/      Which eras exist, and what shifting between them does to the player
   discovery/  What the player is looking at, the journal, and the keys for both
@@ -112,7 +117,67 @@ The rule that shapes it: the world is data, simulation is pure functions, and Re
 
 The panel in the top-left corner shows frames per second, average and worst frame time over the last half second, and the draw calls and triangles the renderer handled in the last frame. Draw calls include the shadow pass, so each shadow-casting object counts twice.
 
+## The first real site
+
+Press G to leave the fictional street for a real plot: the corner of Tinubu Square, Lagos, where the building known as Casa do Fernandez, Ilojo Bar and Olaiya House stood. G again returns to the street.
+
+It is shown on two days, and T moves between them:
+
+| Day | What is there | Dated by |
+|---|---|---|
+| 1 August 2016 | The building, as a plain mass, with the market and minibuses in front | Two photographs with that camera date |
+| 18 September 2016 | The cleared plot: rubble, a part-removed fence and a signboard | Ten photographs published that day |
+
+![The plot on 1 August 2016, in plain boxes](docs/screenshots/ilojo-1-august.png)
+
+![The same plot on 18 September 2016](docs/screenshots/ilojo-18-september.png)
+
+**It is a graybox, not a model of the building.** Every shape is a box. The front is 18.6 m wide, from a deed sketch of 1914; the heights and depths are estimates from photographs. The building was measured in 2012 and those drawings were not used. What surrounds the plot is not reconstructed at all.
+
+**Press V to see what each thing rests on.** Everything is coloured as one of three kinds, and a key on screen names them:
+
+| Kind | Meaning |
+|---|---|
+| Evidenced | As seen in a photograph dated to that day |
+| Estimated | It was there; its size or position is an estimate, and the data says what was assumed |
+| Placeholder | Something stood there; it is not reconstructed |
+
+![The evidence view](docs/screenshots/ilojo-evidence-view.png)
+
+Nothing is marked as evidenced yet. That is deliberate: in a box world every size is an estimate, and the first thing that could honestly be called evidenced is a front modelled from the photographs, which does not exist yet.
+
+### What can be found there
+
+Seven things can be inspected, four on the first day and three on the second, and two connections link the days. It works as on the street, with three differences.
+
+- **Every statement shows what it rests on**, as short references in brackets such as `[C-12, C-13]`. The journal lists each source found so far: what it is, its date and how that date is known, who holds it, and the credit line.
+- **"Observed" means seen in a photograph taken on that very day**, not seen in the boxes on screen, which show almost none of it. The heading reads "Observed in the sources" to say so.
+- **There is a fourth kind of statement, "Reported"**: what a named study or account states, when that source has been read but what it rests on has not been checked. It is kept apart from what is observed.
+
+![An inspection at the plot, with its sources](docs/screenshots/ilojo-inspection.png)
+
+| Kind | Meaning at the real site |
+|---|---|
+| Observed in the sources | Visible in a cited photograph dated to the day shown |
+| Inferred | Follows from comparing cited sources. Only connections hold these |
+| Reported | A named source states it. Not checked beyond that |
+| Not known | What the sources do not settle, stated plainly |
+
+The connection between the two days infers only that the plot's built environment changed. It reports the date two sources give for the demolition, and lists who was responsible as not known.
+
+What is left out on purpose: people, the demolition itself, who was responsible and why, any lettering that could not be read, and every archival photograph. The photographs inform the boxes; none is shown or stored here. The reasoning is in [docs/research/milestone-05/reconstruction-boundaries.md](docs/research/milestone-05/reconstruction-boundaries.md).
+
 ## Known gaps
+
+The real site:
+
+- **Most of what is observed is not drawn.** The statements describe arches, balconies and a parapet; the screen shows a box. That gap closes only with a modelled front.
+- **Sources are cited, not shown.** No photograph or map appears in the game.
+- **The assumption behind each estimate is in the data, not on screen.** The evidence view shows the kind, not the sentence.
+- **The evidence view relies on three colours.** They differ in lightness and are named on screen, but a box cannot be asked which kind it is.
+- **The sun is in the same place as on the street.** The site's grid is turned from north and the lighting does not follow.
+- **The edges are invisible.** Where the reconstruction stops, the player stops, and nothing is drawn to say why.
+
 
 Time shift:
 
@@ -124,7 +189,7 @@ Time shift:
 
 Observation and discovery:
 
-- **Three points of interest and one connection.** All invented.
+- **On the street, three points of interest and one connection.** All invented.
 - **The journal is not saved.** It is empty again after a reload.
 - **Sight and targets are boxes, not what is drawn.** The building's open veranda counts as solid, and round props as square. At grazing angles what you see and what the game allows can differ slightly.
 - **Locations need a downward look**, as described above. This may need tuning.

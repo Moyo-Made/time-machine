@@ -59,14 +59,17 @@ Six photographs carry a camera date or a stated one: **C-10, C-11** (17 July), *
 - Banners hang from several balconies.
 - In front: market umbrellas, yellow minibuses, and a yellow sign reading "Welcome to Lagos Island Local Government".
 - Shutters on the right-hand upper bays are green. Two upper doors stand open and are blue.
-- **A side elevation** (C-05, C-06): two bays deep, with the same arched openings, balconies and parapet. A lower red-brick structure adjoins it.
+- **A side elevation** (C-05, C-06): two bays deep, with the same arched openings, balconies and parapet. A lower red-brick structure adjoins it at the back. The front corner is at the right-hand end of this side, so it is the left side as seen from the square: the Bamgbose Street side.
+- **A second banner** hangs on the parapet of that side. In C-06 its heading reads "PUBLIC NOTICE" and its last line "NATIONAL COMMISSION FOR MUSEUMS AND MONUMENTS".
+- Stalls under lean-to roofs run along the foot of that side (C-06).
 - **From behind or inside** (C-04): a corrugated metal roof below the level of the parapet, and weathered timber boarding.
 - A stair with worn stone or concrete steps (C-03).
 - Tall modern buildings stand behind and beside it (C-02, C-05, C-06).
 
 **Inferred**
 
-- The parapet banner is probably one of the monuments commission's. The thesis says the commission hung banners on the building warning that it was protected (page 69), and the banner's last line appears to end "AND MONUMENTS". I could not read the rest.
+- The front's parapet banner is the same notice as the one on the side, which names the monuments commission. The thesis says the commission hung banners on the building warning that it was protected (page 69). I could not read the body of either.
+- **The two-storey block is about 7.5 m deep**: two bays, each about as wide as a wide bay of the front.
 - **The undated seven were taken between about 1 August and 11 September 2016.** They show a white "PUBLIC NOTICE" banner on the parapet. That banner is in both 7 September photographs and in neither 1 August photograph. This rests on C-17's camera date, and that camera's clock reads 03:45 in daylight, so its date is itself uncertain.
 - The roof is a pitched metal roof hidden behind the parapet. C-04 shows part of it only.
 - The building is two bays deep along the side seen. The other side and the back are not shown clearly.
@@ -269,7 +272,7 @@ Viewed inside the thesis PDF, where they are small. The originals have not been 
 
 **Inferred**
 
-- **The building's walls were of brick under the render.** The rubble is overwhelmingly brick.
+- **Brick was the main material on the plot.** The rubble is overwhelmingly brick. Some of it will be from the bare-brick range behind the front (C-05), so this does not by itself show what lay under the front's render.
 - These pictures show the Casa do Fernandez plot. The account says so, and the dark building and concrete-frame tower behind are consistent with those behind the building in C-02 and C-05. I have not matched them rigorously.
 - The bracket is one of the balcony brackets. The account says a resident bought it on site.
 

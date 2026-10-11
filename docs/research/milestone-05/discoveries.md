@@ -139,8 +139,8 @@ Each of these rests on a document the thesis cites and I have not seen. In the g
 ### 18. Brick under the render
 
 - **Observed:** photographs taken on 18 September 2016 show the plot covered in broken red brick.
-- **Inferred:** the building's walls were brick beneath their rendered surface.
-- **Unknown:** where the brick was made.
+- **Inferred:** brick was the main building material on the plot. Some of it may come from the lower range at the back, which was bare brick; so this does not by itself show what was under the front's render.
+- **Unknown:** what the front's walls were made of; where the brick was made.
 - **Source:** W-2016. In copyright; describe, do not show.
 
 ### 19. A fence, then a sign
